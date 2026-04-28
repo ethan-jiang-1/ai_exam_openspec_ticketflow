@@ -49,33 +49,23 @@ pnpm check
 ```
 ① ticket-domain-types ──── 共享类型定义（Role / TicketStatus / Ticket）
 │
-├──→ ② ticket-db-schema ──→ ③ ticket-api ──────────────────────┐
-│     Drizzle 建表            CRUD + 状态流转 (assign/start/     │
-│                             complete)                         │
-│                                                               │
-└──→ ④ demo-role-session ──→ ⑤ frontend-routing ───────────────┤
-      角色选择（无登录）         React Router + Layout shell     │
-                                                                │
-                  ⑥ workbench-ui ←──────────────────────────────┘
-                  三角色工作台完整 UI（最大 change）
-                        │
-                  ⑦ demo-polish
-                  收尾打磨 + 集成测试
+├──→ ② ticket-data-api ──── 建表 + 迁移 + CRUD API + 状态流转
+│
+└──→ ③ demo-frontend ────── 角色选择 + 路由 + 三个工作台 UI
+        │
+        └──→ ④ demo-polish ─ 收尾打磨 + 集成测试 + 演示说明
 ```
 
-| # | Change | 规模 | 交付物 | 依赖 |
-|---|--------|------|--------|------|
-| 1 | `ticket-domain-types` | S | packages/shared 中 Role、TicketStatus、Ticket 等类型 | 无 |
-| 2 | `ticket-db-schema` | S | Drizzle schema + 迁移，tickets 表可用 | 1 |
-| 3 | `ticket-api` | M | REST API：CRUD + assign/start/complete 状态流转 | 2 |
-| 4 | `demo-role-session` | S | 角色选择页 + RoleContext + GET /api/roles | 1 |
-| 5 | `frontend-routing` | S | React Router + Layout + 4 个路由占位页 | 4 |
-| 6 | `workbench-ui` | L | 三角色工作台完整 UI，对接 API | 3, 5 |
-| 7 | `demo-polish` | S | Status badge、时间格式化、集成测试、演示说明 | 6 |
+| # | Change | 规模 | 交付物 | 依赖 | 验证方式 |
+|---|--------|------|--------|------|----------|
+| 1 | `ticket-domain-types` | S | packages/shared 中 Role、TicketStatus、Ticket 等类型 + 常量 | 无 | `pnpm check` 通过，web/server 均 import 无报错 |
+| 2 | `ticket-data-api` | M | Drizzle schema + tickets 表 + REST API（CRUD + assign/start/complete） | 1 | `pnpm db:migrate` 成功，curl 可跑通完整状态流转 |
+| 3 | `demo-frontend` | L | 角色选择页 + React Router + Layout + 三角色工作台 UI + API 对接 | 1, 2 | 浏览器可演示完整 Demo 流程 |
+| 4 | `demo-polish` | S | Status badge、时间格式化、集成测试、演示说明 | 3 | 陌生人按 README 可在 2 分钟内完成演示 |
 
 ### 关键路径
 
-`①→②→③→⑥→⑦`（可并行：②‖④，③‖⑤）
+`①→②→③→④`（线性，每步都是一个完整可验证的切片）
 
 ### Demo 验收标准
 
