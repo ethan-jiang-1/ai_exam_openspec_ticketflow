@@ -48,6 +48,7 @@ ticketflow/
 │       ├── package.json
 │       ├── tsconfig.json         # 继承 base + ESNext
 │       ├── tsup.config.ts        # build 配置
+│       ├── drizzle.config.ts     # Drizzle Kit 迁移配置
 │       └── src/
 │           ├── app.ts            # Hono app 定义（可被测试 import）
 │           ├── index.ts          # 入口：import app, 调用 listen
@@ -139,7 +140,7 @@ ticketflow/
 
 **理由：** tsup 配置极简、构建快速、原生支持 TypeScript、输出 ESM 格式。比 tsc 更适合 Node.js 应用的打包场景。Hono 官方推荐此方案。
 
-**构建产物：** `apps/server/dist/index.js`（ESM 格式），tsup 自动处理 TypeScript 编译和依赖打包。
+**构建产物：** `apps/server/dist/index.js`（ESM 格式），tsup 自动处理 TypeScript 编译和依赖打包。`better-sqlite3` 为 native 模块，配置为 external 不打包进产物。
 
 ### 11. App 导出模式（可测试性）
 
