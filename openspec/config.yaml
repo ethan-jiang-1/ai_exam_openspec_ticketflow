@@ -38,15 +38,36 @@ context: |
     - kebab-case 格式
     - 功能类直接描述, 基建类可加 setup- 前缀, 修复类可加 fix- 前缀
 
-# Per-artifact rules (optional)
+# Per-artifact rules
 rules:
   proposal:
     - Capabilities 使用 kebab-case 命名
     - 每个 capability 必须在编码表中注册缩写
+    - 必须包含成功标准 (Success Criteria)：列出可验证的完成条件
+    - Impact 必须列出具体的文件/目录变更，不使用模糊描述如"完整脚手架"
+    - proposal 声明的 capability 必须与 specs 目录一一对应
+  design:
+    - 必须包含目录树 (Directory Layout)，展示关键文件和目录结构
+    - 每个技术决策必须在对应的 spec 中有 Requirement 覆盖
+    - 必须包含配置管理策略（环境变量、端口、路径等配置项如何管理）
+    - 前后端分离架构必须说明开发代理 (dev proxy) 策略
+    - Open Questions 不允许写"无"——至少列出 2 个待确认的假设或风险
+    - 所有 artifact 中的示例值必须一致（如类型名、端口号、路径）
+    - design 中的每个决策必须在 spec 中有对应 Requirement
   specs:
     - 所有 Requirement 必须带 {CAP}-{SEQ} 编码
     - 每个 Requirement 至少有一个 Scenario
     - Scenario 必须使用 #### 级别标题
+    - SHALL 语句必须具体可验证：包含具体的值、路径、端口、格式
+    - 禁止使用"或类似工具"等模糊表述，必须指定具体技术
+    - 所有 artifact 中的示例值必须一致（如类型名、端口号、路径）
+    - 每个 Scenario 必须可自动化验证或可通过明确步骤手动验证
+    - spec 中的每个 Requirement 必须有至少一个 task 实现它
   tasks:
     - 任务描述末尾标注关联 Requirement ID
     - 任务粒度控制在单个会话可完成
+    - 必须声明任务间依赖（当任务 A 依赖任务 B 的产出时）
+    - 每个 task group 必须可独立验证完成
+    - 所有 spec Requirement 必须有对应 task 覆盖（正向追溯）
+    - 安装依赖必须作为显式 task，不允许隐含在其他 task 中
+    - tasks.md 中的验证步骤必须映射到 spec 中的 Scenario
