@@ -25,12 +25,12 @@
 
 ### Requirement: DT-003 Vitest 测试框架
 
-项目 SHALL 配置 Vitest 测试框架，`apps/web` 和 `apps/server` 各自有独立的 `vitest.config.ts`。
+项目 SHALL 配置 Vitest 测试框架，`apps/web`、`apps/server` 和 `packages/shared` 各自有独立的 `vitest.config.ts`。
 
 #### Scenario: 运行所有测试
 
 - **WHEN** 在根目录执行 `pnpm test`
-- **THEN** Vitest SHALL 运行 `apps/web` 和 `apps/server` 的所有测试用例，输出通过/失败计数，退出码反映测试结果
+- **THEN** Vitest SHALL 运行 `apps/web`、`apps/server` 和 `packages/shared` 的所有测试用例，输出通过/失败计数，退出码反映测试结果
 
 #### Scenario: 单个工作区运行测试
 

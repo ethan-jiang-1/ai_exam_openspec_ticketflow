@@ -39,7 +39,7 @@ TicketFlow 是一个工单流程处理工具，聚焦工单的多人处理链，
 
 - `pnpm install` 成功安装所有依赖，workspace:* 引用正常解析
 - `pnpm dev` 同时启动前端（端口 5173）和后端（端口 3000）开发服务器，前端可通过代理访问后端 API
-- `pnpm build` 成功构建所有工作区，产物分别在 `apps/web/dist` 和 `apps/server/dist`
+- `pnpm build` 成功构建所有工作区，产物分别在 `apps/web/dist`（Vite 产物）和 `apps/server/dist`（tsup 产物 `index.js`）
 - `pnpm test` 运行所有测试并通过（至少包含 /health 端点测试和 shared 类型导出测试）
 - `pnpm lint` 无报错
 - `GET /health` 返回 `{ "status": "ok" }` 和 200 状态码

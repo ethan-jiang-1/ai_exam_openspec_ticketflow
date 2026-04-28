@@ -47,8 +47,10 @@ ticketflow/
 │   └── server/                   # 后端 API 服务
 │       ├── package.json
 │       ├── tsconfig.json         # 继承 base + ESNext
+│       ├── tsup.config.ts        # build 配置
 │       └── src/
-│           ├── index.ts          # Hono 入口 + CORS
+│           ├── app.ts            # Hono app 定义（可被测试 import）
+│           ├── index.ts          # 入口：import app, 调用 listen
 │           ├── db/
 │           │   ├── index.ts      # Drizzle 连接实例
 │           │   └── schema.ts     # Drizzle schema 定义（空，待后续填充）
@@ -84,13 +86,13 @@ ticketflow/
 
 **选择：** Hono
 
-**理由：** 轻量、现代、原生 TypeScript、类型安全的路由和中间件。比 Express 更现代，比 Fastify 更轻量。
+**理由：** 轻量、现代、原生 TypeScript、类型安全的路由和中间件。比 Express 更现代，比 Fastify 更轻量。开发阶段启用 Hono `logger()` 中间件用于请求日志调试。
 
 ### 4. ORM：Drizzle ORM
 
 **选择：** Drizzle ORM + better-sqlite3
 
-**理由：** Drizzle 原生支持 SQLite，类型安全，轻量无侵入。schema-first 的设计方式适合先定义模型再开发。better-sqlite3 是同步的 SQLite 驱动，性能好且无 async 复杂性。
+**理由：** Drizzle 原生支持 SQLite，类型安全，轻量无侵入。schema-first 的设计方式适合先定义模型再开发。better-sqlite3 是同步的 SQLite 驱动，性能好且无 async 复杂性。初始化时默认启用 SQLite WAL 模式以提升读并发性能。
 
 ### 5. 测试框架：Vitest
 
@@ -130,6 +132,51 @@ ticketflow/
 **选择：** concurrently 同时启动前后端 dev server
 
 **理由：** `pnpm dev` 一条命令启动全部服务，日志统一输出且带前缀区分来源。
+
+### 10. 后端构建：tsup
+
+**选择：** 使用 tsup（基于 esbuild）构建 apps/server
+
+**理由：** tsup 配置极简、构建快速、原生支持 TypeScript、输出 ESM 格式。比 tsc 更适合 Node.js 应用的打包场景。Hono 官方推荐此方案。
+
+**构建产物：** `apps/server/dist/index.js`（ESM 格式），tsup 自动处理 TypeScript 编译和依赖打包。
+
+### 11. App 导出模式（可测试性）
+
+**选择：** 将 Hono app 实例定义与服务器启动分离为两个文件
+
+**理由：** `src/app.ts` 导出 Hono app 实例（挂载中间件和路由），`src/index.ts` 导入 app 并调用 `listen()`。测试文件可直接 `import app from './app'` 而不触发服务器启动。
+
+```
+  src/app.ts          src/index.ts
+  ┌────────────┐      ┌────────────────────┐
+  │ new Hono() │─────▶│ import app         │
+  │ 挂载路由   │      │ import 'dotenv'    │
+  │ 挂载中间件 │      │ app.listen(port)   │
+  │ export app │      └────────────────────┘
+  └─────┬──────┘
+        │
+        │  测试时直接 import
+        ▼
+  ┌────────────┐
+  │ app.test.ts│
+  │ app.fetch()│
+  │ → 不触发   │
+  │   listen() │
+  └────────────┘
+```
+
+### 12. Workspace 包命名
+
+**选择：** 所有 workspace 包使用 `@ticketflow/` 作用域命名
+
+| 工作区 | 包名 | 用途 |
+|--------|------|------|
+| packages/shared | `@ticketflow/shared` | 共享类型 |
+| apps/server | `@ticketflow/server` | 后端 API |
+| apps/web | `@ticketflow/web` | 前端应用 |
+
+**理由：** 作用域命名避免与 npm 包冲突，`pnpm --filter @ticketflow/*` 可精确指定工作区。
 
 ## Configuration Management
 
@@ -194,6 +241,4 @@ ticketflow/
 
 ## Open Questions
 
-1. **SQLite WAL 模式**：是否在初始化时默认启用 WAL 模式以提升读并发性能？建议默认启用，因为对单写多读的工单场景有益。
-2. **pnpm shamefully-hoist**：是否需要 `shamefully-hoist=true`？如果 React / Hono 的依赖解析不需要提升，应避免使用以保持严格的依赖隔离。建议先不设置，遇到问题再加。
-3. **Hono 日志中间件**：开发阶段是否启用 Hono 的 `logger()` 中间件？建议启用，对调试有帮助。
+（所有前期问题已在 Decisions 中正式决策，当前无遗留问题。新问题随实现过程发现后追加。）

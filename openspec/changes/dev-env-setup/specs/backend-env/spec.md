@@ -30,12 +30,12 @@
 
 ### Requirement: BE-003 Drizzle ORM + SQLite 数据库
 
-`apps/server` SHALL 集成 Drizzle ORM，使用 better-sqlite3 作为 SQLite 驱动，数据库文件路径由 `DATABASE_PATH` 环境变量指定，默认为 `./data/ticketflow.db`。
+`apps/server` SHALL 集成 Drizzle ORM，使用 better-sqlite3 作为 SQLite 驱动，数据库文件路径由 `DATABASE_PATH` 环境变量指定，默认为 `./data/ticketflow.db`。初始化时 SHALL 启用 SQLite WAL 模式。
 
 #### Scenario: 数据库连接初始化
 
 - **WHEN** 服务器启动
-- **THEN** Drizzle SHALL 成功连接到 `DATABASE_PATH` 指定的 SQLite 数据库文件（路径相对于项目根目录解析）。若文件不存在，SHALL 自动创建；若所在目录不存在，SHALL 自动创建目录
+- **THEN** Drizzle SHALL 成功连接到 `DATABASE_PATH` 指定的 SQLite 数据库文件（路径相对于项目根目录解析），启用 WAL 模式（`PRAGMA journal_mode=WAL`）。若文件不存在，SHALL 自动创建；若所在目录不存在，SHALL 自动创建目录
 
 #### Scenario: 数据库迁移
 
