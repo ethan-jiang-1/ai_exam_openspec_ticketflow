@@ -20,7 +20,7 @@
 
 ### D1: 使用 react-router-dom 做路由
 
-安装 `react-router-dom`（v7），使用 `BrowserRouter` + `Routes` + `Route` 实现页面切换。
+安装 `react-router-dom`（v7），使用 v6 兼容 API（`BrowserRouter` + `Routes` + `Route` + `Navigate`）实现页面切换。不使用 v7 推荐的 `createBrowserRouter` + `RouterProvider` 模式 — Demo 阶段 compat API 更简单直接。
 
 路由结构：
 ```
@@ -79,6 +79,8 @@ API 函数：
 ### D8: 测试策略
 
 前端测试使用 Vitest + `@testing-library/react`。组件测试验证渲染输出和交互行为。API client 测试验证请求构造（使用 `fetch` mock）。不引入 E2E 测试框架 — Demo 阶段手动验证即可。
+
+需要在 `apps/web/vitest.config.ts` 或 `vitest` 配置中设置 `environment: 'jsdom'`（现有 `app.test.tsx` 不涉及 DOM，未配置；引入 testing-library 后必须配置）。
 
 ## Directory Layout
 

@@ -47,6 +47,8 @@ context: |
     - API spec 完整性: 每个 API 端点在 spec 中必须覆盖三种场景：成功响应、输入校验失败（400）、资源不存在（404）
     - API 错误格式统一: 所有 API 错误响应统一使用 `{ error: string }` 格式
     - 测试隔离: 涉及数据库的测试必须在 beforeEach 中通过 ORM API 清空数据，确保测试间互不污染
+    - 前端 API 错误场景: 前端页面/组件涉及 API 调用时，spec 必须覆盖 API 调用失败场景（显示错误提示、非白屏、用户可恢复），不可只写正常路径
+    - 客户端数据过滤显式声明: 页面在客户端过滤数据时（非服务端过滤），spec 必须明确声明：(1) 数据来源（如 getTickets() 返回全部），(2) 过滤条件（如 status === "submitted"），(3) 过滤在客户端执行
 
   Requirement ID 编码规则:
     格式: {CAP}-{SEQ} (如 PS-001, BE-002)
@@ -107,4 +109,5 @@ rules:
     - 每个 task group 必须可独立验证完成
     - 所有 spec Requirement 必须有对应 task 覆盖（正向追溯）
     - 安装依赖必须作为显式 task，不允许隐含在其他 task 中
+    - 新增测试基础设施（测试库、测试环境配置如 jsdom、setup 文件）必须作为显式 task，不可隐含在组件测试 task 中
     - tasks.md 中的验证步骤必须映射到 spec 中的 Scenario

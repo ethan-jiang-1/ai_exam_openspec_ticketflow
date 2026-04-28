@@ -26,7 +26,7 @@
 
 ## Impact
 
-- `apps/web/package.json` — 新增 `react-router-dom` 依赖
+- `apps/web/package.json` — 新增 `react-router-dom` 依赖 + `@testing-library/react`、`@testing-library/jest-dom` devDependencies
 - `apps/web/vite.config.ts` — 修复 proxy rewrite 规则
 - `apps/web/src/main.tsx` — 引入 BrowserRouter
 - `apps/web/src/App.tsx` — 替换为路由配置

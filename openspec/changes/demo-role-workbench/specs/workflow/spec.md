@@ -35,26 +35,31 @@
 
 ### Requirement: WF-003 提交者工作台
 
-`/workbench/submitter` SHALL 显示提交者工作台，包含：创建工单表单（title + description 输入框 + 提交按钮）和当前用户创建的工单列表。
+`/workbench/submitter` SHALL 显示提交者工作台，包含：创建工单表单（title + description 输入框 + 提交按钮）和工单列表。工单列表 SHALL 仅显示 `createdBy === "submitter"` 的工单（通过 `getTickets()` 获取全部后在客户端过滤）。
 
 #### Scenario: 创建工单
 
 - **WHEN** 用户填写 title 为 "Fix login" 和 description 为 "Safari 上无法登录"，点击提交
 - **THEN** SHALL 调用 `POST /api/tickets`，body 为 `{ title: "Fix login", description: "Safari 上无法登录", createdBy: "submitter" }`，成功后工单列表 SHALL 刷新显示新工单
 
-#### Scenario: 工单列表显示
+#### Scenario: 工单列表仅显示自己创建的
 
-- **WHEN** 工单列表中有 2 条工单
-- **THEN** 页面 SHALL 以表格形式显示 2 行，每行包含标题、状态、创建时间
+- **WHEN** `getTickets()` 返回 4 条工单，其中 2 条 `createdBy` 为 `"submitter"`，2 条为 `"dispatcher"`
+- **THEN** 页面 SHALL 仅显示 2 条 `createdBy === "submitter"` 的工单
 
 #### Scenario: title 为空时提交按钮禁用
 
 - **WHEN** title 输入框为空
 - **THEN** 提交按钮 SHALL 处于禁用状态
 
+#### Scenario: API 调用失败时显示错误
+
+- **WHEN** 创建工单或获取工单列表时后端返回错误
+- **THEN** 页面 SHALL 显示错误提示信息（非白屏）
+
 ### Requirement: WF-004 调度者工作台
 
-`/workbench/dispatcher` SHALL 显示所有状态为 `submitted` 的工单，每条工单有一个"指派"操作。
+`/workbench/dispatcher` SHALL 显示所有状态为 `submitted` 的工单（通过 `getTickets()` 获取全部后在客户端按 `status === "submitted"` 过滤），每条工单有一个"指派"操作。
 
 #### Scenario: 指派工单
 
@@ -66,9 +71,14 @@
 - **WHEN** 所有工单都不是 submitted 状态
 - **THEN** 页面 SHALL 显示"暂无待指派的工单"提示
 
+#### Scenario: API 调用失败时显示错误
+
+- **WHEN** 指派或获取工单列表时后端返回错误
+- **THEN** 页面 SHALL 显示错误提示信息（非白屏）
+
 ### Requirement: WF-005 完成者工作台
 
-`/workbench/completer` SHALL 显示所有状态为 `assigned` 或 `in_progress` 且 `assignedTo` 为 `"completer"` 的工单。`assigned` 状态的工单有"开始处理"按钮，`in_progress` 状态的工单有"完成"按钮。
+`/workbench/completer` SHALL 显示所有 `assignedTo === "completer"` 且状态为 `assigned` 或 `in_progress` 的工单（客户端过滤）。`assigned` 状态的工单有"开始处理"按钮，`in_progress` 状态的工单有"完成"按钮。
 
 #### Scenario: 开始处理工单
 
@@ -84,6 +94,11 @@
 
 - **WHEN** 有一条 assigned 工单，assignedTo 为 "other_person"
 - **THEN** 该工单 SHALL 不出现在完成者工作台
+
+#### Scenario: API 调用失败时显示错误
+
+- **WHEN** 开始处理、完成或获取工单列表时后端返回错误
+- **THEN** 页面 SHALL 显示错误提示信息（非白屏）
 
 ### Requirement: WF-006 API Client 封装
 
@@ -110,7 +125,7 @@
 
 ### Requirement: WF-008 react-router-dom 路由挂载
 
-`apps/web/src/main.tsx` SHALL 用 `BrowserRouter` 包裹 `App`，`App.tsx` SHALL 定义路由：`/` → 角色选择页，`/workbench/submitter` → 提交者工作台，`/workbench/dispatcher` → 调度者工作台，`/workbench/completer` → 完成者工作台。未匹配路由 SHALL 重定向到 `/`。
+`apps/web/src/main.tsx` SHALL 用 `BrowserRouter`（v7 的 v6 兼容 API）包裹 `App`，`App.tsx` SHALL 定义路由：`/` → 角色选择页，`/workbench/submitter` → 提交者工作台，`/workbench/dispatcher` → 调度者工作台，`/workbench/completer` → 完成者工作台。未匹配路由 SHALL 用 `Navigate` 重定向到 `/`。
 
 #### Scenario: 访问无效路由
 
