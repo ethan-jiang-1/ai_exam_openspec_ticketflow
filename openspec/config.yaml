@@ -1,0 +1,52 @@
+schema: spec-driven
+
+# Project context - AI reads this when creating artifacts
+context: |
+  Project: TicketFlow - 工单流程处理工具
+  Tech stack: TypeScript full-stack (React + Hono + Drizzle + SQLite)
+  Monorepo: pnpm workspaces (apps/web, apps/server, packages/shared)
+  Auth: simple username/password
+  Database: SQLite (better-sqlite3)
+  ORM: Drizzle ORM
+  Frontend: React 18 + Vite 5
+  Backend: Hono
+  Testing: Vitest
+  Linting: ESLint + Prettier
+
+  Requirement ID 编码规则:
+    格式: {CAP}-{SEQ} (如 PS-001, BE-002)
+    CAP = capability 缩写 (2-3 大写字母)
+    SEQ = 三位数字序号, 同 capability 内递增
+
+  Capability 编码表:
+    PS  = project-structure
+    FE  = frontend-env
+    BE  = backend-env
+    ST  = shared-types
+    DT  = dev-tooling
+    TKT = ticket
+    WF  = workflow
+    UA  = user-auth
+
+  Spec 编写约定:
+    - 每个 Requirement 必须带 ID: ### Requirement: {CAP}-{SEQ} {名称}
+    - Scenario 使用 WHEN/THEN 格式
+    - 使用 SHALL/MUST 表达强制性需求
+    - tasks.md 中任务应标注关联 Requirement ID: [CAP-SEQ]
+
+  Change 命名规则:
+    - kebab-case 格式
+    - 功能类直接描述, 基建类可加 setup- 前缀, 修复类可加 fix- 前缀
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - Capabilities 使用 kebab-case 命名
+    - 每个 capability 必须在编码表中注册缩写
+  specs:
+    - 所有 Requirement 必须带 {CAP}-{SEQ} 编码
+    - 每个 Requirement 至少有一个 Scenario
+    - Scenario 必须使用 #### 级别标题
+  tasks:
+    - 任务描述末尾标注关联 Requirement ID
+    - 任务粒度控制在单个会话可完成
