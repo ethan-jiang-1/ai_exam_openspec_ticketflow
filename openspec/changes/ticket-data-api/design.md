@@ -20,11 +20,11 @@ change ① 已在 `packages/shared` 中定义了 `Ticket`、`TicketStatus`、`Ro
 
 ### D1: Drizzle schema 字段与 Ticket interface 对齐
 
-tickets 表字段名和类型严格对应 `Ticket` interface：`id` (text, PK)、`title` (text)、`description` (text)、`status` (text)、`createdBy` (text)、`assignedTo` (text, nullable)、`createdAt` (text, ISO 8601)、`updatedAt` (text, ISO 8601)。
+tickets 表 DB 列名使用 snake_case（`created_by`, `assigned_to`, `created_at`, `updated_at`），通过 Drizzle `text('created_by')` 映射到 JS 侧 camelCase 属性名（`createdBy`），与 `Ticket` interface 对齐。所有列均使用 `text` 类型。
 
-`id` 不使用自增 integer，而由应用层生成 UUID v4 字符串，保持与 `Ticket.id: string` 一致。
+`id` 不使用自增 integer，而由应用层通过 `crypto.randomUUID()` 生成 UUID v4 字符串（Node 16.7+ 可用，项目要求 18+）。
 
-**理由**: 避免应用层类型和数据库列之间的阻抗失配。`drizzle-orm/sqlite-core` 的 `text` 类型映射到 JS `string`，与 TypeScript 类型天然对齐。
+**理由**: DB 列名遵循 SQL 惯例（snake_case），JS 侧遵循 TypeScript 惯例（camelCase），Drizzle 桥接两者。`text` 类型映射到 JS `string`，与 TypeScript 类型天然对齐。
 
 ### D2: 状态流转为独立 PATCH 端点
 
@@ -56,6 +56,18 @@ submitted → assigned → in_progress → completed
 ### D6: 迁移策略
 
 使用 `drizzle-kit push`（开发阶段直接 push schema 到 SQLite 文件）。不生成 SQL migration 文件 — Demo 阶段不需要版本化迁移。
+
+### D7: 测试数据库策略
+
+API 测试使用 `app.request()` 直接调 Hono（不走 HTTP server，复用现有测试模式）。每个测试文件通过 `beforeEach` 使用 Drizzle API（`db.delete(tickets)`）清空 tickets 表，测试之间互不污染。测试复用开发数据库 `./data/ticketflow.db`，不额外引入内存数据库（保持 db/index.ts 导出单一性）。
+
+**理由**: 引入内存 DB 需要改 db/index.ts 的导出方式（工厂函数），增加抽象层。Demo 阶段 Drizzle `db.delete()` 足够简单且保持可移植性（不写原始 SQL）。MVP 阶段可改用独立测试 DB 或工厂模式。
+
+### D8: 错误响应格式
+
+所有 API 错误响应统一格式：`{ error: string }`。与 `app.ts` 全局错误处理器的 `{ error, code }` 保持一致原则，但业务层校验错误（如 title 为空、非法状态）只返回 `error` 字段即可，`code` 字段留给全局异常。
+
+**理由**: 统一格式让前端（change ③）可以用同一套错误处理逻辑。
 
 ## Directory Layout
 

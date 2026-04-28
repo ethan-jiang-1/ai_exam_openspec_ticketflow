@@ -42,6 +42,11 @@ context: |
     - 环境变量通过 .env 管理，新增变量必须同步更新 .env.example
     - 新增 npm 依赖必须作为显式 task 偿明，不可隐含在其他 task 中
     - 数据库可移植约束: DB 相关代码（驱动、连接、pragma）必须收敛在 apps/server/src/db/ 目录内，禁止在路由/业务层直接引用数据库驱动或 SQLite 专属 API，确保 SQLite ↔ PostgreSQL 切换仅涉及 db/ 目录和 package.json
+    - 禁止原始 SQL: 全项目禁止手写 SQL 语句（包括测试文件中的 DELETE/FROM 等），所有数据库操作必须通过 Drizzle ORM API 完成，确保可移植性
+    - 命名一致性: DB 列名统一 snake_case，JS/TS 属性名统一 camelCase，artifacts 中涉及字段名时必须明确标注映射关系（如 "created_by → createdBy"），禁止混用
+    - API spec 完整性: 每个 API 端点在 spec 中必须覆盖三种场景：成功响应、输入校验失败（400）、资源不存在（404）
+    - API 错误格式统一: 所有 API 错误响应统一使用 `{ error: string }` 格式
+    - 测试隔离: 涉及数据库的测试必须在 beforeEach 中通过 ORM API 清空数据，确保测试间互不污染
 
   Requirement ID 编码规则:
     格式: {CAP}-{SEQ} (如 PS-001, BE-002)
@@ -84,6 +89,8 @@ rules:
     - Open Questions 不允许写"无"——至少列出 2 个待确认的假设或风险
     - 所有 artifact 中的示例值必须一致（如类型名、端口号、路径）
     - design 中的每个决策必须在 spec 中有对应 Requirement
+    - 涉及数据库的 change 必须明确测试数据库策略（隔离方式、清空方式）
+    - DB 相关字段名必须明确标注 DB 列名 ↔ JS 属性名映射关系
   specs:
     - 所有 Requirement 必须带 {CAP}-{SEQ} 编码
     - 每个 Requirement 至少有一个 Scenario
