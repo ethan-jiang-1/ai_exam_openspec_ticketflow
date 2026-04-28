@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-labelledby="title desc">
+  <title id="title">TicketFlow Demo 视觉图</title>
+  <desc id="desc">Demo 的目标是让 TicketFlow 三角色主流程活起来：本地能跑，提交者能提交，调度者能接住，完成者能推进到最小完成，且暂时不要求真实登录。</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="13" flood-color="#20313a" flood-opacity="0.13"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2f3a3f"/>
+    </marker>
+    <style>
+      .bg { fill: #fbfff8; }
+      .ink { fill: #243239; }
+      .muted { fill: #66757f; }
+      .green { fill: #e7f4ec; stroke: #2f7d5b; }
+      .soft { fill: #f6fbf7; stroke: #2f7d5b; }
+      .card { fill: #ffffff; stroke: #26363d; stroke-width: 2; }
+      .panel { fill: #f7f2e8; stroke: #26363d; stroke-width: 1.6; }
+      .line { stroke: #2f3a3f; stroke-width: 2; fill: none; }
+      .title { font: 800 38px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .subtitle { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .label { font: 700 22px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .body { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .small { font: 400 17px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .tiny { font: 400 15px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="820"/>
+  <circle cx="1090" cy="76" r="150" fill="#e7f4ec"/>
+  <circle cx="112" cy="730" r="180" fill="#edf7ef"/>
+
+  <text x="60" y="66" class="title ink">Demo：先让三角色 TicketFlow 活起来</text>
+  <text x="62" y="104" class="subtitle muted">目标不是复杂，而是先拿到一个真实可演示的三角色交接基线，再去谈后面的 MVP 迭代。</text>
+
+  <g transform="translate(60 146)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="1160" height="286" rx="26"/>
+    <text x="32" y="45" class="label ink">用户看到的最小产品画面</text>
+    <text x="32" y="74" class="small muted">三角色工作台都不用复杂，但每一个都要真的承担职责。</text>
+
+    <g transform="translate(34 106)">
+      <rect class="panel" x="0" y="0" width="330" height="136" rx="18"/>
+      <rect x="0" y="0" width="330" height="34" rx="18" fill="#2f7d5b"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">提交者工作台</text>
+      <text x="20" y="62" class="body ink">提交 ticket</text>
+      <rect x="20" y="82" width="134" height="18" rx="8" fill="#ffffff" stroke="#d5d0c5"/>
+      <rect x="170" y="82" width="84" height="18" rx="8" fill="#ffffff" stroke="#d5d0c5"/>
+      <rect x="20" y="108" width="86" height="22" rx="11" fill="#243239"/>
+      <text x="63" y="124" text-anchor="middle" fill="#ffffff" class="tiny">提交</text>
+    </g>
+
+    <path d="M384 176 H430" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(450 106)">
+      <rect class="panel" x="0" y="0" width="330" height="136" rx="18"/>
+      <rect x="0" y="0" width="330" height="34" rx="18" fill="#2f7d5b"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">调度者工作台</text>
+      <text x="20" y="62" class="body ink">接住并调度</text>
+      <rect x="20" y="82" width="190" height="18" rx="8" fill="#ffffff" stroke="#d5d0c5"/>
+      <rect x="20" y="108" width="78" height="22" rx="11" fill="#e7f4ec" stroke="#2f7d5b"/>
+      <text x="59" y="124" text-anchor="middle" class="tiny" fill="#246448">指派</text>
+    </g>
+
+    <path d="M800 176 H846" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(866 106)">
+      <rect class="panel" x="0" y="0" width="260" height="136" rx="18"/>
+      <rect x="0" y="0" width="260" height="34" rx="18" fill="#2f7d5b"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">完成者工作台</text>
+      <text x="20" y="62" class="body ink">最小完成推进</text>
+      <rect x="20" y="82" width="72" height="22" rx="11" fill="#e7f4ec" stroke="#2f7d5b"/>
+      <text x="56" y="98" text-anchor="middle" class="tiny" fill="#246448">doing</text>
+      <path d="M102 93 H138" class="line" marker-end="url(#arrow)"/>
+      <rect x="150" y="82" width="72" height="22" rx="11" fill="#f1eadb" stroke="#c8bfae"/>
+      <text x="186" y="98" text-anchor="middle" class="tiny muted">done</text>
+    </g>
+  </g>
+
+  <g transform="translate(74 478)">
+    <text x="0" y="0" class="label ink">Demo 的一条线</text>
+    <text x="0" y="30" class="small muted">如果这条线走不通，后面加登录、字段、规则、测试都没有意义。</text>
+
+    <g transform="translate(0 64)">
+      <rect class="soft" x="0" y="0" width="188" height="70" rx="20"/>
+      <text x="94" y="30" text-anchor="middle" class="body ink">项目能跑</text>
+      <text x="94" y="55" text-anchor="middle" class="tiny muted">本地启动成功</text>
+    </g>
+    <path d="M196 100 H244" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(256 64)">
+      <rect class="soft" x="0" y="0" width="188" height="70" rx="20"/>
+      <text x="94" y="30" text-anchor="middle" class="body ink">提交 ticket</text>
+      <text x="94" y="55" text-anchor="middle" class="tiny muted">最少字段就够</text>
+    </g>
+    <path d="M452 100 H500" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(512 64)">
+      <rect class="soft" x="0" y="0" width="188" height="70" rx="20"/>
+      <text x="94" y="30" text-anchor="middle" class="body ink">调度接住</text>
+      <text x="94" y="55" text-anchor="middle" class="tiny muted">不是掉在地上</text>
+    </g>
+    <path d="M708 100 H756" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(768 64)">
+      <rect class="soft" x="0" y="0" width="188" height="70" rx="20"/>
+      <text x="94" y="30" text-anchor="middle" class="body ink">完成推进</text>
+      <text x="94" y="55" text-anchor="middle" class="tiny muted">至少一次状态变化</text>
+    </g>
+    <path d="M964 100 H1012" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(1024 64)">
+      <rect class="soft" x="0" y="0" width="188" height="70" rx="20"/>
+      <text x="94" y="30" text-anchor="middle" class="body ink">结果一致</text>
+      <text x="94" y="55" text-anchor="middle" class="tiny muted">三边都讲得通</text>
+    </g>
+  </g>
+
+  <g transform="translate(60 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="540" height="112" rx="24"/>
+    <text x="28" y="38" class="label ink">做到这样就够交 Demo</text>
+    <text x="30" y="70" class="small muted">能跑、能演示、三角色主流程成立、粗糙但不假。</text>
+  </g>
+
+  <g transform="translate(680 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="540" height="112" rx="24"/>
+    <text x="28" y="38" class="label ink">先不要把题带偏</text>
+    <text x="30" y="70" class="small muted">先不要求真实登录、完整账号体系、多表、外部通知。</text>
+  </g>
+</svg>

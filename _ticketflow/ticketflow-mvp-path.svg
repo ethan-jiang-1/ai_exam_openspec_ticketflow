@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-labelledby="title desc">
+  <title id="title">TicketFlow MVP 视觉图</title>
+  <desc id="desc">这张图讲第一次打到 MVP 的目标：最小角色登录成立，不同角色进入不同工作台，业务字段和关键规则进入主线，用户愿意先试一下。</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="13" flood-color="#20313a" flood-opacity="0.13"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2f3a3f"/>
+    </marker>
+    <style>
+      .bg { fill: #f7fbff; }
+      .ink { fill: #243239; }
+      .muted { fill: #66757f; }
+      .blue { fill: #e5f0f7; stroke: #256b9a; }
+      .soft { fill: #f2f8fc; stroke: #256b9a; }
+      .card { fill: #ffffff; stroke: #26363d; stroke-width: 2; }
+      .panel { fill: #f7f2e8; stroke: #26363d; stroke-width: 1.6; }
+      .line { stroke: #2f3a3f; stroke-width: 2; fill: none; }
+      .title { font: 800 38px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .subtitle { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .label { font: 700 22px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .body { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .small { font: 400 17px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .tiny { font: 400 15px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="820"/>
+  <circle cx="1068" cy="88" r="152" fill="#e5f0f7"/>
+  <circle cx="128" cy="724" r="178" fill="#eaf4fa"/>
+
+  <text x="60" y="66" class="title ink">MVP：最小登录 + 第一次进入可验证价值</text>
+  <text x="62" y="104" class="subtitle muted">重点不是一次做满，而是先让角色身份开始真实影响入口、页面和动作。</text>
+
+  <g transform="translate(60 146)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="1160" height="286" rx="26"/>
+    <text x="32" y="45" class="label ink">用户看到的是一个第一次开始值得试用的小系统</text>
+    <text x="32" y="74" class="small muted">先让最小角色登录和角色差异成立，再让字段、规则和判断力进入主线。</text>
+
+    <g transform="translate(34 106)">
+      <rect class="panel" x="0" y="0" width="318" height="138" rx="18"/>
+      <rect x="0" y="0" width="318" height="34" rx="18" fill="#256b9a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">角色入口</text>
+      <text x="20" y="62" class="body ink">最小角色登录</text>
+      <rect x="20" y="78" width="86" height="22" rx="11" fill="#e5f0f7" stroke="#256b9a"/>
+      <text x="63" y="94" text-anchor="middle" class="tiny" fill="#1f5a82">提交者</text>
+      <rect x="116" y="78" width="86" height="22" rx="11" fill="#e5f0f7" stroke="#256b9a"/>
+      <text x="159" y="94" text-anchor="middle" class="tiny" fill="#1f5a82">调度者</text>
+      <rect x="212" y="78" width="86" height="22" rx="11" fill="#e5f0f7" stroke="#256b9a"/>
+      <text x="255" y="94" text-anchor="middle" class="tiny" fill="#1f5a82">完成者</text>
+    </g>
+
+    <path d="M372 176 H414" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(434 106)">
+      <rect class="panel" x="0" y="0" width="344" height="138" rx="18"/>
+      <rect x="0" y="0" width="344" height="34" rx="18" fill="#256b9a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">调度者工作台</text>
+      <text x="20" y="62" class="body ink">字段开始有业务意义</text>
+      <rect x="20" y="78" width="90" height="18" rx="7" fill="#ffffff" stroke="#d5d0c5"/>
+      <text x="30" y="92" class="tiny muted">priority</text>
+      <rect x="122" y="78" width="96" height="18" rx="7" fill="#ffffff" stroke="#d5d0c5"/>
+      <text x="132" y="92" class="tiny muted">assignee</text>
+      <rect x="230" y="78" width="94" height="18" rx="7" fill="#ffffff" stroke="#d5d0c5"/>
+      <text x="240" y="92" class="tiny muted">dueDate</text>
+      <text x="20" y="120" class="tiny" fill="#1f5a82">调度动作开始受规则约束</text>
+    </g>
+
+    <path d="M798 176 H840" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(860 106)">
+      <rect class="panel" x="0" y="0" width="266" height="138" rx="18"/>
+      <rect x="0" y="0" width="266" height="34" rx="18" fill="#256b9a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">完成者工作台</text>
+      <text x="20" y="62" class="body ink">完成动作有规则</text>
+      <rect x="20" y="78" width="72" height="22" rx="11" fill="#e5f0f7" stroke="#256b9a"/>
+      <text x="56" y="94" text-anchor="middle" class="tiny" fill="#1f5a82">doing</text>
+      <path d="M102 89 H138" class="line" marker-end="url(#arrow)"/>
+      <rect x="150" y="78" width="78" height="22" rx="11" fill="#e5f0f7" stroke="#256b9a"/>
+      <text x="189" y="94" text-anchor="middle" class="tiny" fill="#1f5a82">done</text>
+      <text x="20" y="120" class="tiny" fill="#1f5a82">完成结果会回流到其他角色视角</text>
+    </g>
+  </g>
+
+  <g transform="translate(74 480)">
+    <text x="0" y="0" class="label ink">第一次打到 MVP 的一条线</text>
+    <text x="0" y="30" class="small muted">先拿到最小角色登录和最小价值，再顺着真实反馈继续补强。</text>
+
+    <g transform="translate(0 64)">
+      <rect class="soft" x="0" y="0" width="184" height="70" rx="20"/>
+      <text x="92" y="30" text-anchor="middle" class="body ink">角色登录</text>
+      <text x="92" y="55" text-anchor="middle" class="tiny muted">不同身份进不同台</text>
+    </g>
+    <path d="M192 100 H238" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(250 64)">
+      <rect class="soft" x="0" y="0" width="184" height="70" rx="20"/>
+      <text x="92" y="30" text-anchor="middle" class="body ink">字段 option</text>
+      <text x="92" y="55" text-anchor="middle" class="tiny muted">优先级、负责人</text>
+    </g>
+    <path d="M442 100 H488" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(500 64)">
+      <rect class="soft" x="0" y="0" width="184" height="70" rx="20"/>
+      <text x="92" y="30" text-anchor="middle" class="body ink">migration</text>
+      <text x="92" y="55" text-anchor="middle" class="tiny muted">数据结构变清楚</text>
+    </g>
+    <path d="M692 100 H738" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(750 64)">
+      <rect class="soft" x="0" y="0" width="184" height="70" rx="20"/>
+      <text x="92" y="30" text-anchor="middle" class="body ink">规则约束</text>
+      <text x="92" y="55" text-anchor="middle" class="tiny muted">不是随便改</text>
+    </g>
+    <path d="M942 100 H988" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(1000 64)">
+      <rect class="soft" x="0" y="0" width="210" height="70" rx="20"/>
+      <text x="105" y="30" text-anchor="middle" class="body ink">跨角色一致</text>
+      <text x="105" y="55" text-anchor="middle" class="tiny muted">各工作台前后一致</text>
+    </g>
+  </g>
+
+  <g transform="translate(60 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="360" height="128" rx="24"/>
+    <text x="26" y="38" class="label ink">它比 Demo 强在哪</text>
+    <text x="28" y="70" class="small muted">角色身份开始真实，</text>
+    <text x="28" y="96" class="small muted">用户愿意拿少量真实事项试一下。</text>
+  </g>
+
+  <g transform="translate(460 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="360" height="128" rx="24"/>
+    <text x="26" y="38" class="label ink">它还不是终局</text>
+    <text x="28" y="70" class="small muted">先拿到最小登录和判断力，</text>
+    <text x="28" y="96" class="small muted">再拿真实反馈继续补强。</text>
+  </g>
+
+  <g transform="translate(860 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="360" height="128" rx="24"/>
+    <text x="26" y="38" class="label ink">它开始适合验证</text>
+    <text x="28" y="70" class="small muted">能解释角色差异、规则和价值，</text>
+    <text x="28" y="96" class="small muted">也能暴露缺口。</text>
+  </g>
+</svg>

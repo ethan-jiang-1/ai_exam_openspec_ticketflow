@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">TicketFlow 作业视觉图</title>
+  <desc id="desc">这张图用三角色工作台、核心交接流程，以及 Demo 到 MVP 的成熟度表达说明 TicketFlow 作业：先把三角色主线做成 Demo，再进入 MVP，并理解 MVP 会沿真实反馈继续补强。</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#20313a" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2f3a3f"/>
+    </marker>
+    <style>
+      .bg { fill: #fffdf6; }
+      .ink { fill: #243239; }
+      .muted { fill: #66757f; }
+      .line { stroke: #2f3a3f; stroke-width: 2; fill: none; }
+      .soft-line { stroke: #b8c2c8; stroke-width: 1.5; fill: none; }
+      .card { fill: #ffffff; stroke: #26363d; stroke-width: 2; }
+      .panel { fill: #f7f2e8; stroke: #26363d; stroke-width: 1.6; }
+      .green { fill: #e7f4ec; stroke: #2f7d5b; }
+      .blue { fill: #e5f0f7; stroke: #256b9a; }
+      .amber { fill: #fff1df; stroke: #b45f2a; }
+      .green-text { fill: #246448; }
+      .blue-text { fill: #1f5a82; }
+      .amber-text { fill: #944a1f; }
+      .small { font: 400 18px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .body { font: 500 22px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .label { font: 700 22px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .title { font: 800 38px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .subtitle { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .tiny { font: 400 15px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="900"/>
+  <circle cx="1050" cy="78" r="140" fill="#e9f3ed"/>
+  <circle cx="126" cy="804" r="190" fill="#f9ecd9"/>
+
+  <text x="60" y="64" class="title ink">TicketFlow 这道作业，到底要做成什么？</text>
+  <text x="62" y="100" class="subtitle muted">一个给小团队用的轻量 ticket 流转工具：先让三角色交接线成立，再进入 MVP，并理解 MVP 会沿真实反馈继续补强。</text>
+
+  <g transform="translate(60 142)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="1160" height="300" rx="26"/>
+    <text x="32" y="46" class="label ink">用户第一眼看到的是三类工作台</text>
+    <text x="32" y="76" class="small muted">不要先从共享 CRUD 页面想，先让学员脑子里有三角色产品画面。</text>
+
+    <g transform="translate(36 108)">
+      <rect class="panel" x="0" y="0" width="332" height="148" rx="18"/>
+      <rect x="0" y="0" width="332" height="34" rx="18" fill="#2f7d5b"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">提交者工作台</text>
+      <text x="20" y="62" class="body ink">提交 ticket</text>
+      <rect x="20" y="82" width="180" height="18" rx="8" fill="#ffffff" stroke="#d5d0c5"/>
+      <rect x="20" y="112" width="92" height="24" rx="12" fill="#243239"/>
+      <text x="66" y="129" text-anchor="middle" fill="#ffffff" class="tiny">提交</text>
+      <text x="20" y="168" class="tiny muted">把事情正式交进系统</text>
+    </g>
+
+    <path d="M392 182 H444" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(464 108)">
+      <rect class="panel" x="0" y="0" width="332" height="148" rx="18"/>
+      <rect x="0" y="0" width="332" height="34" rx="18" fill="#256b9a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">调度者工作台</text>
+      <text x="20" y="62" class="body ink">调度 / 指派</text>
+      <rect x="20" y="82" width="80" height="22" rx="11" fill="#e5f0f7" stroke="#256b9a"/>
+      <text x="60" y="98" text-anchor="middle" class="tiny" fill="#1f5a82">high</text>
+      <rect x="112" y="82" width="104" height="22" rx="11" fill="#ffffff" stroke="#d5d0c5"/>
+      <text x="164" y="98" text-anchor="middle" class="tiny muted">assignee</text>
+      <text x="20" y="168" class="tiny muted">判断先后，决定往哪走</text>
+    </g>
+
+    <path d="M820 182 H872" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(892 108)">
+      <rect class="panel" x="0" y="0" width="232" height="148" rx="18"/>
+      <rect x="0" y="0" width="232" height="34" rx="18" fill="#b45f2a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">完成者工作台</text>
+      <text x="20" y="62" class="body ink">推进到完成</text>
+      <rect x="20" y="82" width="76" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="58" y="98" text-anchor="middle" class="tiny" fill="#944a1f">doing</text>
+      <path d="M108 93 H144" class="line" marker-end="url(#arrow)"/>
+      <rect x="156" y="82" width="56" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="184" y="98" text-anchor="middle" class="tiny" fill="#944a1f">done</text>
+      <text x="20" y="168" class="tiny muted">把事情真正做完并收口</text>
+    </g>
+  </g>
+
+  <g transform="translate(86 494)">
+    <text x="0" y="0" class="label ink">同一条主流程：不能丢，也不要乱飞</text>
+    <text x="0" y="30" class="small muted">无论做到哪一档，先守住这条三角色交接线。</text>
+
+    <g transform="translate(0 64)">
+      <rect x="0" y="0" width="188" height="72" rx="20" fill="#ffffff" stroke="#26363d" stroke-width="2"/>
+      <text x="94" y="31" text-anchor="middle" class="body ink">提交 ticket</text>
+      <text x="94" y="56" text-anchor="middle" class="tiny muted">不再淹没在聊天里</text>
+    </g>
+    <path d="M196 100 H248" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(260 64)">
+      <rect x="0" y="0" width="188" height="72" rx="20" fill="#ffffff" stroke="#26363d" stroke-width="2"/>
+      <text x="94" y="31" text-anchor="middle" class="body ink">调度 / 指派</text>
+      <text x="94" y="56" text-anchor="middle" class="tiny muted">有人正式接住它</text>
+    </g>
+    <path d="M456 100 H508" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(520 64)">
+      <rect x="0" y="0" width="188" height="72" rx="20" fill="#ffffff" stroke="#26363d" stroke-width="2"/>
+      <text x="94" y="31" text-anchor="middle" class="body ink">完成处理</text>
+      <text x="94" y="56" text-anchor="middle" class="tiny muted">不是静态展示页</text>
+    </g>
+    <path d="M716 100 H768" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(780 64)">
+      <rect x="0" y="0" width="188" height="72" rx="20" fill="#ffffff" stroke="#26363d" stroke-width="2"/>
+      <text x="94" y="31" text-anchor="middle" class="body ink">结果回流</text>
+      <text x="94" y="56" text-anchor="middle" class="tiny muted">各角色看到一致结果</text>
+    </g>
+    <path d="M976 100 H1028" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(1040 64)">
+      <rect x="0" y="0" width="154" height="72" rx="20" fill="#ffffff" stroke="#26363d" stroke-width="2"/>
+      <text x="77" y="31" text-anchor="middle" class="body ink">判断风险</text>
+      <text x="77" y="56" text-anchor="middle" class="tiny muted">先做什么</text>
+    </g>
+  </g>
+
+  <g transform="translate(60 688)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="1160" height="188" rx="26"/>
+    <text x="34" y="44" class="label ink">正式先讲 Demo / MVP，再理解 MVP 会继续长</text>
+
+    <g transform="translate(34 70)">
+      <rect class="green" x="0" y="0" width="348" height="94" rx="20"/>
+      <text x="22" y="30" class="label green-text">Demo</text>
+      <text x="22" y="56" class="small ink">三角色工作台 → 主流程成立</text>
+      <text x="22" y="82" class="small ink">→ 无需真实登录</text>
+    </g>
+
+    <g transform="translate(406 70)">
+      <rect class="blue" x="0" y="0" width="348" height="94" rx="20"/>
+      <text x="22" y="30" class="label blue-text">MVP</text>
+      <text x="22" y="56" class="small ink">最小登录 → 角色差异</text>
+      <text x="22" y="82" class="small ink">→ 第一次可验证价值</text>
+    </g>
+
+    <g transform="translate(778 70)">
+      <rect class="amber" x="0" y="0" width="348" height="94" rx="20"/>
+      <text x="22" y="30" class="label amber-text">持续补强</text>
+      <text x="22" y="56" class="small ink">验证后补强 → 风险提示</text>
+      <text x="22" y="82" class="small ink">→ 仍然属于 MVP</text>
+    </g>
+  </g>
+
+</svg>

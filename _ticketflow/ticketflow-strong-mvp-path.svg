@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-labelledby="title desc">
+  <title id="title">TicketFlow 更强 MVP 视觉图</title>
+  <desc id="desc">这张图讲验证后的更强 MVP：把暴露出来的关键缺口补掉，让跨角色一致性更稳，风险更容易发现，测试质量更扎实，演示和分享更从容。</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="13" flood-color="#20313a" flood-opacity="0.13"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2f3a3f"/>
+    </marker>
+    <style>
+      .bg { fill: #fffaf3; }
+      .ink { fill: #243239; }
+      .muted { fill: #66757f; }
+      .amber { fill: #fff1df; stroke: #b45f2a; }
+      .soft { fill: #fff8ee; stroke: #b45f2a; }
+      .card { fill: #ffffff; stroke: #26363d; stroke-width: 2; }
+      .panel { fill: #f7f2e8; stroke: #26363d; stroke-width: 1.6; }
+      .line { stroke: #2f3a3f; stroke-width: 2; fill: none; }
+      .title { font: 800 38px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .subtitle { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .label { font: 700 22px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .body { font: 500 20px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .small { font: 400 17px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+      .tiny { font: 400 15px "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="820"/>
+  <circle cx="1078" cy="84" r="150" fill="#fff1df"/>
+  <circle cx="116" cy="730" r="182" fill="#fcebd6"/>
+
+  <text x="60" y="66" class="title ink">更强 MVP：验证后继续补强</text>
+  <text x="62" y="104" class="subtitle muted">这不是第三档，而是在同一条 TicketFlow 主线上把验证暴露出来的关键缺口补上。</text>
+
+  <g transform="translate(60 146)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="1160" height="286" rx="26"/>
+    <text x="32" y="45" class="label ink">用户看到的是补完关键缺口后的更可靠主流程</text>
+    <text x="32" y="74" class="small muted">同样是三角色主线，但风险提示、跨角色一致性和验收稳定性明显更强。</text>
+
+    <g transform="translate(34 106)">
+      <rect class="panel" x="0" y="0" width="348" height="138" rx="18"/>
+      <rect x="0" y="0" width="348" height="34" rx="18" fill="#b45f2a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">调度者工作台</text>
+      <text x="20" y="62" class="body ink">风险项更容易被看见</text>
+      <rect x="20" y="78" width="292" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="32" y="94" class="tiny" fill="#944a1f">高优先级 · 今天到期 · 未处理</text>
+      <text x="20" y="124" class="tiny" fill="#944a1f">先处理什么，一眼更清楚</text>
+    </g>
+
+    <path d="M402 176 H444" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(464 106)">
+      <rect class="panel" x="0" y="0" width="318" height="138" rx="18"/>
+      <rect x="0" y="0" width="318" height="34" rx="18" fill="#b45f2a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">完成者工作台</text>
+      <text x="20" y="62" class="body ink">状态更能解释</text>
+      <rect x="20" y="78" width="78" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="59" y="94" text-anchor="middle" class="tiny" fill="#944a1f">doing</text>
+      <path d="M108 89 H150" class="line" marker-end="url(#arrow)"/>
+      <rect x="162" y="78" width="86" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="205" y="94" text-anchor="middle" class="tiny" fill="#944a1f">blocked</text>
+      <text x="20" y="124" class="tiny" fill="#944a1f">为什么卡住、怎样收口，都更清楚</text>
+    </g>
+
+    <path d="M802 176 H844" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(864 106)">
+      <rect class="panel" x="0" y="0" width="262" height="138" rx="18"/>
+      <rect x="0" y="0" width="262" height="34" rx="18" fill="#b45f2a"/>
+      <text x="20" y="24" fill="#ffffff" class="tiny">质量视角</text>
+      <text x="20" y="62" class="body ink">回归更稳定</text>
+      <rect x="20" y="78" width="88" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="64" y="94" text-anchor="middle" class="tiny" fill="#944a1f">unit</text>
+      <rect x="118" y="78" width="88" height="22" rx="11" fill="#fff1df" stroke="#b45f2a"/>
+      <text x="162" y="94" text-anchor="middle" class="tiny" fill="#944a1f">e2e</text>
+      <text x="20" y="124" class="tiny" fill="#944a1f">演示、验收、分享更从容</text>
+    </g>
+  </g>
+
+  <g transform="translate(74 480)">
+    <text x="0" y="0" class="label ink">验证后补强的一条线</text>
+    <text x="0" y="30" class="small muted">它更强，是因为同一条主线更可靠，不是因为换了题。</text>
+
+    <g transform="translate(0 64)">
+      <rect class="soft" x="0" y="0" width="190" height="70" rx="20"/>
+      <text x="95" y="30" text-anchor="middle" class="body ink">风险识别</text>
+      <text x="95" y="55" text-anchor="middle" class="tiny muted">高优先级、逾期</text>
+    </g>
+    <path d="M198 100 H244" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(256 64)">
+      <rect class="soft" x="0" y="0" width="190" height="70" rx="20"/>
+      <text x="95" y="30" text-anchor="middle" class="body ink">一致性</text>
+      <text x="95" y="55" text-anchor="middle" class="tiny muted">跨角色不打架</text>
+    </g>
+    <path d="M454 100 H500" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(512 64)">
+      <rect class="soft" x="0" y="0" width="190" height="70" rx="20"/>
+      <text x="95" y="30" text-anchor="middle" class="body ink">回归测试</text>
+      <text x="95" y="55" text-anchor="middle" class="tiny muted">关键流程不掉链</text>
+    </g>
+    <path d="M710 100 H756" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(768 64)">
+      <rect class="soft" x="0" y="0" width="190" height="70" rx="20"/>
+      <text x="95" y="30" text-anchor="middle" class="body ink">演示脚本</text>
+      <text x="95" y="55" text-anchor="middle" class="tiny muted">5 分钟讲清价值</text>
+    </g>
+    <path d="M966 100 H1012" class="line" marker-end="url(#arrow)"/>
+
+    <g transform="translate(1024 64)">
+      <rect class="soft" x="0" y="0" width="190" height="70" rx="20"/>
+      <text x="95" y="30" text-anchor="middle" class="body ink">临时分享</text>
+      <text x="95" y="55" text-anchor="middle" class="tiny muted">能给别人看</text>
+    </g>
+  </g>
+
+  <g transform="translate(60 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="540" height="112" rx="24"/>
+    <text x="26" y="38" class="label ink">强在哪里</text>
+    <text x="28" y="70" class="small muted">风险更早暴露，跨角色更一致，验收时更容易解释价值。</text>
+  </g>
+
+  <g transform="translate(680 656)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="540" height="112" rx="24"/>
+    <text x="26" y="38" class="label ink">这一轮在补什么</text>
+    <text x="28" y="70" class="small muted">补的是验证暴露的关键缺口，不是单纯继续堆功能。</text>
+  </g>
+</svg>
