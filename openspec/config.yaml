@@ -13,6 +13,35 @@ context: |
   Testing: Vitest
   Linting: ESLint + Prettier
 
+  Directory Conventions (目录约定):
+    项目采用 pnpm monorepo，每个 workspace 有明确职责边界。
+    新增文件必须放入对应 workspace，禁止在根目录直接创建业务代码。
+
+    apps/web/          — 前端 React 应用
+      src/             — 页面组件、hooks、样式
+      src/__tests__/   — 前端单元测试
+      public/          — 静态资源
+
+    apps/server/       — 后端 Hono API 服务
+      src/routes/      — API 路由（每个资源一个文件，如 tickets.ts）
+      src/db/          — 数据库连接、Drizzle schema、迁移
+      src/__tests__/   — 后端单元测试
+      src/middleware/   — Hono 中间件（如有）
+
+    packages/shared/   — 前后端共享类型
+      src/             — 类型定义、常量、工具函数
+      src/__tests__/   — 共享包测试
+
+    根目录              — 仅放配置文件（package.json, tsconfig, eslint, prettier 等）
+    openspec/          — 规范文档，禁止放代码
+
+  Coding Conventions (编码约定):
+    - 测试文件放 src/__tests__/ 目录，与源文件同 workspace
+    - 新增路由必须在 apps/server/src/app.ts 中挂载
+    - 共享类型变更流程: 先改 packages/shared → 再改消费方 (web/server)
+    - 环境变量通过 .env 管理，新增变量必须同步更新 .env.example
+    - 新增 npm 依赖必须作为显式 task 声明，不可隐含在其他 task 中
+
   Requirement ID 编码规则:
     格式: {CAP}-{SEQ} (如 PS-001, BE-002)
     CAP = capability 缩写 (2-3 大写字母)
