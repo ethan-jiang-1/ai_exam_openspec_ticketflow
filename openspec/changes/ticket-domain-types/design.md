@@ -20,7 +20,7 @@
 
 用 `const` 对象 + `as const` 定义运行时常量，再用 `typeof obj[keyof typeof obj]` 推导联合类型。不使用 TypeScript `enum`。
 
-**理由**: `enum` 会产生运行时代码且与 tree-shaking 不友好；`as const` 对象同时提供运行时值和编译期类型，且与后续 Drizzle schema 定义方式一致。
+**理由**: `enum` 会产生运行时代码且与 tree-shaking 不友好；`as const` 对象同时提供运行时值和编译期类型，且与后续 Drizzle schema 定义方式一致。常量对象的键名统一与值保持一致（如 `in_progress: "in_progress"`），避免 camelCase/snake_case 混用导致消费者困惑。
 
 ### D2: 单文件组织
 
@@ -28,7 +28,13 @@
 
 **理由**: 当前类型量小（3 组类型），不值得拆分多个文件。后续 change ② 在 server 端建表时，只需 import `TicketStatus` 等类型即可。
 
-### D3: Ticket 字段设计
+### D3: 同时提供对象常量和数组常量
+
+除 `ROLES` / `TICKET_STATUSES` 对象常量外，同时导出 `ROLE_LIST` / `TICKET_STATUS_LIST` 数组常量。
+
+**理由**: 前端 change ③ 渲染下拉框、badge 颜色映射等场景需要遍历所有值。`as const` 对象的 `Object.values()` 可以推导，但显式数组常量使用更直观且类型更精确。
+
+### D4: Ticket 字段设计
 
 ```
 Ticket {
@@ -44,6 +50,16 @@ Ticket {
 ```
 
 **理由**: 覆盖 README 中 Demo 验收标准所需的最小字段集。`assignedTo` 为 nullable 表示尚未指派。不含 `priority` / `dueDate` 等扩展字段（README 明确排除）。
+
+### D5: 状态流转与角色可见性不在本 change 定义
+
+Demo 流程 `submitted → assigned → in_progress → completed` 的流转约束（如不能从 completed 跳回 submitted）和角色可见性映射（submitter 看自己创建的、dispatcher 看待指派的、completer 看指派给自己的）均不在类型层体现，留给 change ② API 层（流转校验）和 change ③ 前端层（视图过滤）实现。
+
+**理由**: 类型定义只描述数据形状，流转规则是业务逻辑，不适合在纯类型中约束。
+
+### D6: 配置管理策略与开发代理策略
+
+本 change 不引入配置项、环境变量、网络端点或开发代理变更。纯类型定义无需这些。
 
 ## Directory Layout
 

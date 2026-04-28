@@ -2,7 +2,7 @@
 
 ### Requirement: ST-004 Role 角色类型定义
 
-`packages/shared` SHALL 导出 `Role` 联合类型（值为 `"submitter" | "dispatcher" | "completer"`）和 `ROLES` 运行时常量对象。
+`packages/shared` SHALL 导出 `Role` 联合类型（值为 `"submitter" | "dispatcher" | "completer"`）、`ROLES` 运行时常量对象和 `ROLE_LIST` 常量数组。
 
 #### Scenario: Role 类型可被前后端引用
 
@@ -12,11 +12,16 @@
 #### Scenario: ROLES 常量包含所有角色值
 
 - **WHEN** 从 `@ticketflow/shared` 导入 `ROLES`
-- **THEN** `ROLES` SHALL 是一个包含 `submitter: "submitter"`、`dispatcher: "dispatcher"`、`completer: "completer"` 键值对的 `const` 对象
+- **THEN** `ROLES` SHALL 是一个包含 `submitter: "submitter"`、`dispatcher: "dispatcher"`、`completer: "completer"` 键值对的 `const` 对象（键名与值一致）
+
+#### Scenario: ROLE_LIST 提供可遍历数组
+
+- **WHEN** 从 `@ticketflow/shared` 导入 `ROLE_LIST`
+- **THEN** `ROLE_LIST` SHALL 是一个 `readonly ["submitter", "dispatcher", "completer"]` 数组，可通过 `for...of` 遍历所有角色值
 
 ### Requirement: ST-005 TicketStatus 工单状态类型定义
 
-`packages/shared` SHALL 导出 `TicketStatus` 联合类型（值为 `"submitted" | "assigned" | "in_progress" | "completed"`）和 `TICKET_STATUSES` 运行时常量对象。
+`packages/shared` SHALL 导出 `TicketStatus` 联合类型（值为 `"submitted" | "assigned" | "in_progress" | "completed"`）、`TICKET_STATUSES` 运行时常量对象和 `TICKET_STATUS_LIST` 常量数组。
 
 #### Scenario: TicketStatus 类型可被前后端引用
 
@@ -26,7 +31,12 @@
 #### Scenario: TICKET_STATUSES 常量包含所有状态值
 
 - **WHEN** 从 `@ticketflow/shared` 导入 `TICKET_STATUSES`
-- **THEN** `TICKET_STATUSES` SHALL 是一个包含 `submitted: "submitted"`、`assigned: "assigned"`、`inProgress: "in_progress"`、`completed: "completed"` 键值对的 `const` 对象
+- **THEN** `TICKET_STATUSES` SHALL 是一个包含 `submitted: "submitted"`、`assigned: "assigned"`、`in_progress: "in_progress"`、`completed: "completed"` 键值对的 `const` 对象（键名与值保持 snake_case 一致）
+
+#### Scenario: TICKET_STATUS_LIST 提供可遍历数组
+
+- **WHEN** 从 `@ticketflow/shared` 导入 `TICKET_STATUS_LIST`
+- **THEN** `TICKET_STATUS_LIST` SHALL 是一个 `readonly ["submitted", "assigned", "in_progress", "completed"]` 数组，可通过 `for...of` 遍历所有状态值
 
 ### Requirement: ST-006 Ticket 工单类型定义
 

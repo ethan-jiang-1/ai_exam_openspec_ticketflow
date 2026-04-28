@@ -4,7 +4,7 @@
 
 ## What Changes
 
-- 在 `packages/shared/src/` 新增工单领域类型：`Role`、`TicketStatus`、`Ticket` 及相关常量
+- 在 `packages/shared/src/` 新增工单领域类型：`Role`、`TicketStatus`、`Ticket` 及相关常量（对象常量 + 数组常量）
 - 从 `index.ts` 统一导出，前后端通过 `@ticketflow/shared` 引用
 
 ## Capabilities
