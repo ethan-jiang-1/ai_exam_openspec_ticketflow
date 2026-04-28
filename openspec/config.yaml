@@ -8,7 +8,7 @@ context: |
   Auth: simple username/password
   Database: SQLite (better-sqlite3)
   ORM: Drizzle ORM
-  Frontend: React 18 + Vite 5
+  Frontend: React 19 + Vite 8
   Backend: Hono
   Testing: Vitest
   Linting: ESLint + Prettier
