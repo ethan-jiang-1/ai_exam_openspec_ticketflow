@@ -7,7 +7,7 @@
 #### Scenario: 启动前端开发服务器
 
 - **WHEN** 在根目录执行 `pnpm dev`
-- **THEN** Vite 开发服务器 SHALL 启动在端口 5173，控制台输出 `Local: http://localhost:5173/`，支持 HMR
+- **THEN** Vite 开发服务器 SHALL 启动在端口 5173（可通过 `.env` 中的 `VITE_PORT` 配置），控制台输出 `Local: http://localhost:<port>/`，支持 HMR
 
 #### Scenario: 构建前端生产版本
 

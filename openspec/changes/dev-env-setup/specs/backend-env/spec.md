@@ -2,7 +2,7 @@
 
 ### Requirement: BE-001 Hono API 服务器
 
-`apps/server` SHALL 是一个基于 Hono 框架的 API 服务器，支持 TypeScript，默认监听端口 3000（可通过 SERVER_PORT 环境变量配置）。
+`apps/server` SHALL 是一个基于 Hono 框架的 API 服务器，支持 TypeScript，默认监听 `localhost:3000`（可通过 SERVER_HOST 和 SERVER_PORT 环境变量配置）。
 
 #### Scenario: 启动 API 服务器
 
@@ -35,7 +35,7 @@
 #### Scenario: 数据库连接初始化
 
 - **WHEN** 服务器启动
-- **THEN** Drizzle SHALL 成功连接到 `DATABASE_PATH` 指定的 SQLite 数据库文件。若文件不存在，SHALL 自动创建；若所在目录不存在，SHALL 自动创建目录
+- **THEN** Drizzle SHALL 成功连接到 `DATABASE_PATH` 指定的 SQLite 数据库文件（路径相对于项目根目录解析）。若文件不存在，SHALL 自动创建；若所在目录不存在，SHALL 自动创建目录
 
 #### Scenario: 数据库迁移
 

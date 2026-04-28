@@ -25,9 +25,14 @@
 
 ### Requirement: ST-003 初始类型定义
 
-`packages/shared/src/index.ts` SHALL 导出一个 `AppInfo` 类型，包含项目元信息。
+`packages/shared/src/index.ts` SHALL 导出一个 `AppInfo` interface 和一个 `APP_INFO` 运行时常量，包含项目元信息。
 
 #### Scenario: AppInfo 类型可用
 
 - **WHEN** 从 `@ticketflow/shared` 导入 `AppInfo`
 - **THEN** `AppInfo` SHALL 是一个包含 `name: string` 和 `version: string` 字段的 TypeScript interface
+
+#### Scenario: APP_INFO 运行时常量可验证
+
+- **WHEN** 从 `@ticketflow/shared` 导入 `APP_INFO`
+- **THEN** `APP_INFO` SHALL 是一个包含 `name: "ticketflow"` 和 `version: "0.1.0"` 字段的 `const` 对象，类型为 `AppInfo`（通过 `as const` 满足类型约束）

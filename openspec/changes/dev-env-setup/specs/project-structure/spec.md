@@ -43,7 +43,7 @@
 #### Scenario: 从模板创建环境配置
 
 - **WHEN** 开发者执行 `cp .env.example .env`
-- **THEN** 应用 SHALL 使用 `.env` 中的配置值，未设置的变量使用默认值（SERVER_PORT=3000, DATABASE_PATH=./data/ticketflow.db）
+- **THEN** 应用 SHALL 使用 `.env` 中的配置值，未设置的变量使用默认值（SERVER_PORT=3000, DATABASE_PATH=./data/ticketflow.db）。所有路径变量 SHALL 相对于项目根目录解析
 
 #### Scenario: 后端读取数据库路径配置
 

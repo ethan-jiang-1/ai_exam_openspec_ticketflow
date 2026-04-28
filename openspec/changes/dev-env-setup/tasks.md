@@ -2,7 +2,7 @@
 
 > 依赖：无
 
-- [ ] 1.1 初始化根目录 `package.json`（name: ticketflow, private: true, scripts 占位） [PS-002]
+- [ ] 1.1 初始化根目录 `package.json`（name: ticketflow, private: true, scripts 占位，engines: { node: ">=18.0.0" }） [PS-002]
 - [ ] 1.2 创建 `pnpm-workspace.yaml` 声明 `apps/*` 和 `packages/*` [PS-001]
 - [ ] 1.3 创建 `tsconfig.base.json`（strict: true, target: ESNext, moduleResolution: bundler） [PS-002]
 - [ ] 1.4 确认 `.gitignore` 包含 `node_modules/`、`dist/`、`*.db`、`*.db-journal`、`*.db-wal`、`.env`、`.env.local`、`coverage/` [PS-002]
@@ -16,7 +16,7 @@
 
 - [ ] 2.1 初始化 `packages/shared/package.json`（name: @ticketflow/shared, main/types 指向 src/index.ts） [ST-001]
 - [ ] 2.2 配置 `packages/shared/tsconfig.json`（继承 tsconfig.base.json） [ST-002]
-- [ ] 2.3 创建 `packages/shared/src/index.ts`，导出 `AppInfo` interface（name: string, version: string） [ST-003]
+- [ ] 2.3 创建 `packages/shared/src/index.ts`，导出 `AppInfo` interface 和 `APP_INFO` 运行时常量（`{ name: "ticketflow", version: "0.1.0" } as const`） [ST-003]
 - [ ] 2.4 在根目录执行 `pnpm install`，验证 `workspace:*` 引用正常 [ST-001]
 
 ## 3. 后端环境（apps/server）[BE-001 ~ BE-005]
@@ -27,13 +27,13 @@
 - [ ] 3.2 安装后端依赖：`hono`、`drizzle-orm`、`better-sqlite3`、`dotenv` 及对应类型（`@types/better-sqlite3`） [BE-001, BE-003]
 - [ ] 3.3 安装后端开发依赖：`tsx`、`drizzle-kit`、`@types/node` [BE-001, BE-003]
 - [ ] 3.4 配置 `apps/server/tsconfig.json`（继承 base, target: ESNext, module: ESNext） [BE-004]
-- [ ] 3.5 创建 `apps/server/src/db/index.ts`：使用 better-sqlite3 连接 SQLite，路径从 DATABASE_PATH 环境变量读取，目录不存在时自动创建 [BE-003]
+- [ ] 3.5 创建 `apps/server/src/db/index.ts`：使用 better-sqlite3 连接 SQLite，路径从 `DATABASE_PATH` 环境变量读取（使用 `path.resolve(process.cwd(), DATABASE_PATH)` 确保相对于项目根目录），目录不存在时自动创建 [BE-003]
 - [ ] 3.6 创建 `apps/server/src/db/schema.ts`：空 schema 文件，导出空对象（待后续填充） [BE-003]
-- [ ] 3.7 创建 `apps/server/drizzle.config.ts`（引用 db/schema.ts，配置数据库路径） [BE-003]
+- [ ] 3.7 创建 `apps/server/drizzle.config.ts`（引用 db/schema.ts，数据库路径使用 `path.resolve(process.cwd(), process.env.DATABASE_PATH || './data/ticketflow.db')` 确保与运行时一致） [BE-003]
 - [ ] 3.8 在 `apps/server/package.json` 添加 `db:migrate` script：`drizzle-kit push` [BE-003]
 - [ ] 3.9 创建 `apps/server/src/routes/health.ts`：GET /health 返回 `{ "status": "ok" }` [BE-001]
 - [ ] 3.10 创建 `apps/server/src/routes/auth.ts`：占位文件，内容为 TODO 注释 [BE-001]
-- [ ] 3.11 创建 `apps/server/src/index.ts`：Hono 入口，挂载 CORS 中间件、全局错误处理中间件、health 路由，监听 SERVER_PORT [BE-001, BE-002, BE-005]
+- [ ] 3.11 创建 `apps/server/src/index.ts`：Hono 入口，顶部 `import 'dotenv/config'`，挂载 CORS 中间件、全局错误处理中间件、health 路由，监听 `SERVER_HOST:SERVER_PORT`（处理端口冲突：捕获 EADDRINUSE 错误并打印明确错误信息后退出） [BE-001, BE-002, BE-005]
 - [ ] 3.12 配置 `apps/server` 的 dev script：`tsx watch src/index.ts` [BE-001]
 - [ ] 3.13 添加 `@ticketflow/shared` 依赖并验证 `import type { AppInfo }` 可用 [ST-001]
 
@@ -43,7 +43,7 @@
 
 - [ ] 4.1 使用 `pnpm create vite` 初始化 React + TypeScript 前端应用到 `apps/web` [FE-001]
 - [ ] 4.2 配置 `apps/web/tsconfig.json`（继承 base, jsx: "react-jsx"） [FE-002]
-- [ ] 4.3 配置 `apps/web/vite.config.ts`：设置 server.proxy，将 `/api` 转发到 `http://localhost:3000` [FE-003]
+- [ ] 4.3 配置 `apps/web/vite.config.ts`：设置 `server.port` 从 `process.env.VITE_PORT || 5173` 读取，设置 `server.proxy` 将 `/api` 转发到 `http://localhost:3000`，设置 `optimizeDeps.include: ['@ticketflow/shared']` 确保 Vite 预构建正确处理 shared 包的 .ts 源文件 [FE-001, FE-003]
 - [ ] 4.4 创建基础 `apps/web/src/App.tsx` 组件（显示项目名称，引用 @ticketflow/shared 的 AppInfo） [FE-001, ST-001]
 - [ ] 4.5 添加 `@ticketflow/shared` 依赖并验证 `import type { AppInfo }` 可用 [ST-001]
 
@@ -66,7 +66,7 @@
 > 依赖：Task Group 5
 
 - [ ] 6.1 创建 `apps/server/src/routes/__tests__/health.test.ts`：测试 GET /health 返回 `{ "status": "ok" }` 和 200 状态码 [DT-003]
-- [ ] 6.2 创建 shared 类型导出测试：验证 `import { AppInfo } from '@ticketflow/shared'` 成功且类型包含 name/version 字段 [DT-003, ST-003]
+- [ ] 6.2 创建 shared 类型导出测试：验证 `import { APP_INFO } from '@ticketflow/shared'` 成功且 `APP_INFO.name === "ticketflow"`、`APP_INFO.version === "0.1.0"` [DT-003, ST-003]
 
 ## 7. 端到端验证 [PS-001 ~ DT-004]
 
@@ -77,3 +77,9 @@
 - [ ] 7.3 `pnpm build` 成功构建所有工作区 [PS-002]
 - [ ] 7.4 `pnpm test` 通过所有测试 [DT-003]
 - [ ] 7.5 `pnpm lint` 无报错 [DT-001]
+
+## 8. 文档和收尾 [PS-002]
+
+> 依赖：Task Group 7
+
+- [ ] 8.1 创建根目录 `README.md`：包含项目简介、Node.js 版本要求（>=18）、快速开始步骤（pnpm install → cp .env.example .env → pnpm dev）、可用 scripts 说明 [PS-002]

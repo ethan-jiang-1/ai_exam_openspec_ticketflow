@@ -33,7 +33,7 @@ TicketFlow 是一个工单流程处理工具，聚焦工单的多人处理链，
 - `apps/web`：新增前端应用，包含 `vite.config.ts`（含 API 代理配置）、`tsconfig.json`、基础 React 组件、入口文件
 - `apps/server`：新增后端应用，包含 Hono 入口（含 CORS 中间件）、`drizzle.config.ts`、数据库连接、`src/db/index.ts`
 - `packages/shared`：新增共享类型包，包含 `package.json`、`tsconfig.json`、类型导出入口 `src/index.ts`
-- 依赖：引入 React 18、Hono、Drizzle ORM、better-sqlite3、Vite 5、Vitest、ESLint、Prettier、concurrently、dotenv-cli 等
+- 依赖：引入 React 18、Hono、Drizzle ORM、better-sqlite3、Vite 5、Vitest、ESLint、Prettier、concurrently、dotenv 等
 
 ## Success Criteria
 

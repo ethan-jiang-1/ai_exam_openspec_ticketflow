@@ -2,6 +2,8 @@
 
 TicketFlow 是一个工单流程处理工具，使用 TypeScript 全栈开发，数据库为 SQLite，认证方式为简单的用户名密码。本项目从零开始，没有任何现有代码约束。
 
+**运行时要求：** Node.js >= 18.0.0（ESM 支持、`fetch` 全局 API、`node:` 前缀 import 支持）。通过根目录 `package.json` 的 `engines` 字段声明。
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -76,6 +78,8 @@ ticketflow/
 
 **理由：** React 生态最成熟，Vite 开发体验极快。后续可按需引入路由（React Router）和状态管理。
 
+**注意事项：** `@ticketflow/shared` 的 `main` 指向 `.ts` 源文件而非预编译产物。Vite 在开发模式（dev server）下可正常处理，但需要在 `vite.config.ts` 中配置 `optimizeDeps.include: ['@ticketflow/shared']` 确保 Vite 预构建时正确处理该包。`apps/web` 的 build 依赖 Vite 的 bundling 能力，会直接将 shared 的源码打包，无需 shared 包自身的 build 步骤。
+
 ### 3. 后端框架：Hono
 
 **选择：** Hono
@@ -106,11 +110,11 @@ ticketflow/
 
 **理由：** 开发环境下通过 Vite 的 `server.proxy` 将 `/api` 请求转发到后端，避免 CORS 问题。前端请求 `/api/health` → Vite proxy → `localhost:3000/health`。后端仍配置 CORS 中间件作为兜底。
 
-### 8. 配置管理：dotenv-cli + .env
+### 8. 配置管理：dotenv + .env
 
-**选择：** 使用 `.env` 文件管理环境变量，`dotenv-cli` 在 dev script 中加载
+**选择：** 使用 `.env` 文件管理环境变量，通过 `import 'dotenv/config'` 在 `apps/server/src/index.ts` 入口文件顶部加载
 
-**理由：** 轻量，与 Node.js 生态一致。`apps/server` 读取 `.env` 获取端口和数据库路径。`.env.example` 提交到仓库作为模板。
+**理由：** 轻量，与 Node.js 生态一致。`apps/server` 通过 `import 'dotenv/config'` 加载项目根目录的 `.env` 文件，所有路径变量（如 `DATABASE_PATH`）均相对于项目根目录解析。Drizzle Kit 的 `drizzle.config.ts` 中的路径也使用同一解析方式（`path.resolve` 基于 `process.cwd()` 即项目根目录）。`.env.example` 提交到仓库作为模板。
 
 **配置项清单：**
 
@@ -118,7 +122,7 @@ ticketflow/
 |------|--------|------|
 | `SERVER_PORT` | `3000` | 后端 API 端口 |
 | `SERVER_HOST` | `localhost` | 后端监听地址 |
-| `DATABASE_PATH` | `./data/ticketflow.db` | SQLite 数据库文件路径 |
+| `DATABASE_PATH` | `./data/ticketflow.db` | SQLite 数据库文件路径（相对于项目根目录） |
 | `VITE_PORT` | `5173` | 前端开发服务器端口 |
 
 ### 9. 并发启动：concurrently

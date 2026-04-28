@@ -45,7 +45,7 @@
 #### Scenario: shared 类型导出测试通过
 
 - **WHEN** 执行 `apps/server` 或 `apps/web` 的测试
-- **THEN** SHALL 包含一个测试用例验证 `import { AppInfo } from '@ticketflow/shared'` 成功且 `AppInfo` 包含 `name` 和 `version` 字段
+- **THEN** SHALL 包含一个测试用例验证 `import { APP_INFO } from '@ticketflow/shared'` 成功且 `APP_INFO.name` 为 `"ticketflow"`、`APP_INFO.version` 为 `"0.1.0"`
 
 ### Requirement: DT-004 统一开发脚本
 
