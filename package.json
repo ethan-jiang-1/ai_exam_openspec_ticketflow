@@ -1,0 +1,26 @@
+{
+  "name": "ticketflow",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n web,server \"pnpm --filter @ticketflow/web run dev\" \"pnpm --filter @ticketflow/server run dev\"",
+    "build": "pnpm -r --stream --filter @ticketflow/* run build",
+    "test": "pnpm -r --stream --filter @ticketflow/* run test",
+    "lint": "eslint apps/ packages/",
+    "format": "prettier --write \"apps/**/*.ts\" \"apps/**/*.tsx\" \"packages/**/*.ts\"",
+    "check": "pnpm run build && pnpm run test && pnpm run lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
+    "typescript-eslint": "^8.59.1",
+    "vitest": "^4.1.5"
+  }
+}
