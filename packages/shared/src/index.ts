@@ -7,3 +7,5 @@ export const APP_INFO = {
   name: 'ticketflow',
   version: '0.1.0',
 } as const satisfies AppInfo
+
+export * from './ticket-types'

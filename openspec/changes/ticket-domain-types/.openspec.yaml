@@ -4,3 +4,6 @@ history:
   - phase: proposed
     actor: Claude Opus 4.7
     date: 2026-04-28
+  - phase: applied
+    actor: Claude Opus 4.7
+    date: 2026-04-28
