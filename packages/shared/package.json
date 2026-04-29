@@ -8,5 +8,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

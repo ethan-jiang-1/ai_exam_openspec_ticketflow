@@ -5,6 +5,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "packageManager": "pnpm@10.27.0",
   "scripts": {
     "dev": "concurrently -n web,server \"pnpm --filter @ticketflow/web run dev\" \"pnpm --filter @ticketflow/server run dev\"",
     "build": "pnpm -r --stream --filter @ticketflow/* run build",
