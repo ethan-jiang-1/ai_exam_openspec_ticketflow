@@ -1,0 +1,10 @@
+{
+  // Workers assets-only 部署配置
+  // 使 npx wrangler deploy 在 monorepo 根目录成功执行
+  "name": "ticketflow",
+  "compatibility_date": "2026-04-29",
+  "assets": {
+    "directory": "./apps/web/dist",
+    "not_found_handling": "single-page-application"
+  }
+}
