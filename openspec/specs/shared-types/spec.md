@@ -1,7 +1,7 @@
 # shared-types Specification
 
 ## Purpose
-TBD - created by archiving change dev-env-setup. Update Purpose after archive.
+前后端共享类型规范：@ticketflow/shared 包的类型定义、运行时常量导出与工作区引用机制。
 ## Requirements
 ### Requirement: ST-001 共享类型定义包
 

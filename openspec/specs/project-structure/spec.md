@@ -1,7 +1,7 @@
 # project-structure Specification
 
 ## Purpose
-TBD - created by archiving change dev-env-setup. Update Purpose after archive.
+Monorepo 项目结构规范：pnpm 工作区划分、根目录配置文件、环境变量管理与构建顺序约定。
 ## Requirements
 ### Requirement: PS-001 Monorepo 工作区结构
 

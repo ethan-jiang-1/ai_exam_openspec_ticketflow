@@ -1,7 +1,7 @@
 # frontend-env Specification
 
 ## Purpose
-TBD - created by archiving change dev-env-setup. Update Purpose after archive.
+前端运行环境规范：React 19 + Vite 8 应用搭建、TypeScript JSX 配置、开发代理及 Cloudflare Pages 构建要求。
 ## Requirements
 ### Requirement: FE-001 React + Vite 前端应用
 

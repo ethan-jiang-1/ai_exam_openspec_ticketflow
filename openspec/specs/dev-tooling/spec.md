@@ -1,7 +1,7 @@
 # dev-tooling Specification
 
 ## Purpose
-TBD - created by archiving change dev-env-setup. Update Purpose after archive.
+开发工具链配置规范：ESLint、Prettier、Vitest、统一脚本、TypeScript 依赖声明和部署配置。
 ## Requirements
 ### Requirement: DT-001 ESLint 代码检查
 

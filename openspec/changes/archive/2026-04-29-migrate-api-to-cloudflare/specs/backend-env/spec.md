@@ -94,9 +94,9 @@ Node.js 环境初始化时 SHALL 启用 SQLite WAL 模式。
 
 `apps/server` SHALL 提供种子数据用于初始化演示数据：
 - `src/db/seed.ts`：使用 Drizzle ORM insert API 插入种子数据，供 `pnpm db:seed` 本地使用
-- `seed.sql`：等价 INSERT 语句，供 `wrangler d1 execute` 云端播种
+- 云端播种：通过 `curl POST /api/tickets` 调用 API 端点创建数据（底层走 Drizzle ORM）
 
-两份数据 SHALL 覆盖全部 4 种状态（submitted / assigned / in_progress / completed）。
+数据 SHALL 覆盖全部 4 种状态（submitted / assigned / in_progress / completed）。
 
 #### Scenario: 本地播种
 
@@ -105,5 +105,5 @@ Node.js 环境初始化时 SHALL 启用 SQLite WAL 模式。
 
 #### Scenario: 云端播种
 
-- **WHEN** 执行 `wrangler d1 execute ticketflow-db --remote --file=apps/server/seed.sql`
-- **THEN** D1 数据库 SHALL 包含种子数据，`GET /api/tickets` 返回至少 4 条记录
+- **WHEN** 部署成功后，通过 `curl POST /api/tickets` 创建演示数据
+- **THEN** API 端点 SHALL 通过 Drizzle ORM 向 D1 数据库插入数据，`GET /api/tickets` 返回至少 4 条记录
