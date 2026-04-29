@@ -143,7 +143,7 @@ pnpm dev
 ### Change 序列
 
 ```
-① mvp-ui-upgrade ──────── 引入 Ant Design，重构现有页面和组件
+① mvp-ui-upgrade ──────── 引入 Ant Design，重构现有页面和组件 ✓ 已完成
 │
 ├──→ ② mvp-user-auth ──── 用户表 + 预置账号登录 + 会话 + 角色路由
 │
