@@ -1,0 +1,24 @@
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.layout-role {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.layout-main {
+  flex: 1;
+  padding: 24px;
+}
