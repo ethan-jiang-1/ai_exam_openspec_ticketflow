@@ -73,6 +73,12 @@ context: |
     - 使用 SHALL/MUST 表达强制性需求
     - tasks.md 中任务应标注关联 Requirement ID: [CAP-SEQ]
 
+  Spec 目录隔离约定:
+    - specs/ 子目录名 = capability 名（kebab-case），是逻辑隔离边界
+    - 每个 spec 目录只包含该 capability 领域的 requirements，禁止跨领域混放
+    - 第三方平台/服务相关的内容（如 Cloudflare、AWS）必须独立成单独的 spec 目录，确保换平台时可整体删除而不影响通用 spec
+    - proposal 声明的 capability 必须与 specs/ 目录一一对应（1:1）
+
   Change 命名规则:
     - kebab-case 格式
     - 功能类直接描述, 基建类可加 setup- 前缀, 修复类可加 fix- 前缀
