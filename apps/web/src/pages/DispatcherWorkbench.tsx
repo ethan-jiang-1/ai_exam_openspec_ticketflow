@@ -4,14 +4,13 @@ import type { Ticket } from '@ticketflow/shared'
 
 export default function DispatcherWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
-  const [assignInputs, setAssignInputs] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
   const fetchTickets = async () => {
     try {
       setError(null)
       const all = await getTickets()
-      setTickets(all.filter((t) => t.status === 'submitted'))
+      setTickets(all.filter((t) => t.status !== 'completed'))
     } catch (e) {
       setError(e instanceof Error ? e.message : '获取工单失败')
     }
@@ -22,16 +21,9 @@ export default function DispatcherWorkbench() {
   }, [])
 
   const handleAssign = async (id: string) => {
-    const assignedTo = assignInputs[id]?.trim()
-    if (!assignedTo) return
     try {
       setError(null)
-      await assignTicket(id, assignedTo)
-      setAssignInputs((prev) => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
+      await assignTicket(id, 'completer')
       await fetchTickets()
     } catch (e) {
       setError(e instanceof Error ? e.message : '指派失败')
@@ -45,15 +37,15 @@ export default function DispatcherWorkbench() {
       {error && <div className="error-msg">{error}</div>}
 
       {tickets.length === 0 ? (
-        <p className="empty-hint">暂无待指派的工单</p>
+        <p className="empty-hint">暂无待处理的工单</p>
       ) : (
         <table className="ticket-table">
           <thead>
             <tr>
               <th>标题</th>
+              <th>状态</th>
               <th>创建者</th>
               <th>创建时间</th>
-              <th>指派给</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -61,26 +53,21 @@ export default function DispatcherWorkbench() {
             {tickets.map((t) => (
               <tr key={t.id}>
                 <td>{t.title}</td>
+                <td><span className={`status-badge status-${t.status}`}>{t.status}</span></td>
                 <td>{t.createdBy}</td>
                 <td>{new Date(t.createdAt).toLocaleString()}</td>
                 <td>
-                  <input
-                    type="text"
-                    placeholder="指派人"
-                    value={assignInputs[t.id] || ''}
-                    onChange={(e) =>
-                      setAssignInputs((prev) => ({ ...prev, [t.id]: e.target.value }))
-                    }
-                  />
-                </td>
-                <td>
-                  <button
-                    className="btn"
-                    onClick={() => handleAssign(t.id)}
-                    disabled={!assignInputs[t.id]?.trim()}
-                  >
-                    指派
-                  </button>
+                  {t.status === 'submitted' && (
+                    <button className="btn" onClick={() => handleAssign(t.id)}>
+                      指派给 completer
+                    </button>
+                  )}
+                  {t.status === 'assigned' && (
+                    <span>已指派给 {t.assignedTo}</span>
+                  )}
+                  {t.status === 'in_progress' && (
+                    <span>处理中（已指派给 {t.assignedTo}）</span>
+                  )}
                 </td>
               </tr>
             ))}

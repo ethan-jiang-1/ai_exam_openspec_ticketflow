@@ -12,6 +12,7 @@ const mockTickets = [
   { id: '3', title: 'Ticket C', description: '', status: 'submitted', createdBy: 'dispatcher', assignedTo: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
   { id: '4', title: 'Ticket D', description: '', status: 'in_progress', createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
   { id: '5', title: 'Ticket E', description: '', status: 'assigned', createdBy: 'dispatcher', assignedTo: 'other_person', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '6', title: 'Ticket F', description: '', status: 'completed', createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
 ]
 
 function renderPage(path: string, element: React.ReactElement) {
@@ -35,20 +36,25 @@ describe('Workbench filtering', () => {
     renderPage('/workbench/submitter', <SubmitterWorkbench />)
     await waitFor(() => {
       const items = screen.getAllByRole('row')
-      expect(items).toHaveLength(3) // header + 2 data rows
+      expect(items).toHaveLength(4) // header + 3 data rows (A, D, F — all createdBy submitter)
     })
     expect(screen.getByText('Ticket A')).toBeInTheDocument()
     expect(screen.getByText('Ticket D')).toBeInTheDocument()
+    expect(screen.getByText('Ticket F')).toBeInTheDocument()
   })
 
-  it('DispatcherWorkbench only shows status=submitted tickets', async () => {
+  it('DispatcherWorkbench shows all non-completed tickets', async () => {
     renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
     await waitFor(() => {
       const items = screen.getAllByRole('row')
-      expect(items).toHaveLength(3) // header + 2 data rows
+      expect(items).toHaveLength(6) // header + 5 data rows (all except completed)
     })
     expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    expect(screen.getByText('Ticket B')).toBeInTheDocument()
     expect(screen.getByText('Ticket C')).toBeInTheDocument()
+    expect(screen.getByText('Ticket D')).toBeInTheDocument()
+    expect(screen.getByText('Ticket E')).toBeInTheDocument()
+    expect(screen.queryByText('Ticket F')).not.toBeInTheDocument()
   })
 
   it('CompleterWorkbench only shows assignedTo=completer and status=assigned|in_progress', async () => {
