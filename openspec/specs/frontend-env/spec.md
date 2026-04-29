@@ -5,7 +5,7 @@ TBD - created by archiving change dev-env-setup. Update Purpose after archive.
 ## Requirements
 ### Requirement: FE-001 React + Vite 前端应用
 
-`apps/web` SHALL 是一个基于 React 18 和 Vite 5 的前端应用，支持 TypeScript 和热模块替换（HMR）。
+`apps/web` SHALL 是一个基于 React 19 和 Vite 8 的前端应用，支持 TypeScript 和热模块替换（HMR）。`apps/web/package.json` 的 dependencies SHALL 包含 `react-router-dom`（运行时路由依赖）。
 
 #### Scenario: 启动前端开发服务器
 
@@ -16,6 +16,11 @@ TBD - created by archiving change dev-env-setup. Update Purpose after archive.
 
 - **WHEN** 在根目录执行 `pnpm build`
 - **THEN** Vite SHALL 将前端应用构建到 `apps/web/dist` 目录，`index.html` 和 JS bundle 存在于该目录中
+
+#### Scenario: Cloudflare Pages 隔离构建成功
+
+- **WHEN** Cloudflare Pages 执行 `pnpm install --frozen-lockfile && pnpm run build`
+- **THEN** `apps/web` 的 `tsc -b && vite build` SHALL 成功执行，不报 `Cannot find module 'react-router-dom'`
 
 ### Requirement: FE-002 前端 TypeScript 配置
 
