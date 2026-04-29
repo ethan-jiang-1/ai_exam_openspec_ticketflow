@@ -2,10 +2,12 @@ import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { createApp } from './app'
 import { createDb } from './db/node'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import type { NodeEnv } from './db/types'
 
 const dbPath = process.env.DATABASE_PATH || './data/ticketflow.db'
 const db = createDb(dbPath)
+migrate(db, { migrationsFolder: './drizzle' })
 
 const app = createApp<NodeEnv>(async (c, next) => {
   c.set('db', db)

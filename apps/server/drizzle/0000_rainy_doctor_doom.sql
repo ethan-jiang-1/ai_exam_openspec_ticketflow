@@ -1,4 +1,4 @@
-CREATE TABLE `tickets` (
+CREATE TABLE IF NOT EXISTS `tickets` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL,
 	`description` text NOT NULL,

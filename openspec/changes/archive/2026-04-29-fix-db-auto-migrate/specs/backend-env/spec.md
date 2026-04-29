@@ -1,8 +1,5 @@
-# backend-env Specification
+## MODIFIED Requirements
 
-## Purpose
-后端 Hono API 服务器的环境、架构和数据库配置规范。
-## Requirements
 ### Requirement: BE-001 Hono API 服务器
 
 `apps/server` SHALL 是一个基于 Hono 框架的 API 服务器，支持 TypeScript。应用定义（`app.ts`）SHALL 是运行时无关的——不直接 import 任何运行时特定的数据库驱动或文件系统模块。
@@ -50,15 +47,6 @@ Node.js 入口 SHALL 在启动时自动应用数据库迁移（调用 `migrate(d
 - **WHEN** Node.js 服务器启动且数据库已有表（由 `drizzle-kit push` 或之前的 `migrate()` 创建）
 - **THEN** 服务器 SHALL 正常启动不报错，迁移 SQL 使用 `IF NOT EXISTS` 确保幂等
 
-### Requirement: BE-002 CORS 中间件
-
-`apps/server` SHALL 配置 Hono CORS 中间件，允许开发环境下的跨域请求。
-
-#### Scenario: 跨域请求正常处理
-
-- **WHEN** 从 `http://localhost:5173` 向 `http://localhost:3000` 发送 API 请求
-- **THEN** 响应 SHALL 包含 `Access-Control-Allow-Origin` 头，请求正常完成
-
 ### Requirement: BE-003 Drizzle ORM + SQLite 数据库
 
 `apps/server` SHALL 集成 Drizzle ORM，支持双数据库后端：
@@ -100,58 +88,3 @@ Node.js 环境初始化时 SHALL 启用 SQLite WAL 模式。
 
 - **WHEN** 迁移 SQL 文件中的 `CREATE TABLE` 语句执行时表已存在
 - **THEN** SHALL 使用 `IF NOT EXISTS` 语法，不报错，安全跳过
-
-### Requirement: BE-004 后端 TypeScript 配置
-
-`apps/server` SHALL 有独立的 `tsconfig.json`，继承根目录的 `tsconfig.base.json`，配置 target: ESNext, module: ESNext。
-
-#### Scenario: 后端 TypeScript 编译无错误
-
-- **WHEN** 在 `apps/server` 中编写使用 Hono 和 Drizzle 的 TypeScript 代码
-- **THEN** `npx tsc --noEmit`（在 apps/server 目录）SHALL 退出码为 0，无编译错误
-
-### Requirement: BE-005 API 错误处理
-
-`apps/server` SHALL 配置全局错误处理中间件，统一 API 错误响应格式。
-
-#### Scenario: 未捕获的异常返回统一错误格式
-
-- **WHEN** API 处理过程中抛出未捕获的异常
-- **THEN** 响应 SHALL 为 `{ "error": "<错误描述>", "code": "INTERNAL_ERROR" }`，HTTP 状态码为 500，Content-Type 为 `application/json`
-
-### Requirement: BE-006 DB 工厂模式
-
-`apps/server/src/db/` 目录 SHALL 包含运行时特定的数据库工厂函数：
-- `node.ts`：导出 `createDb(dbPath: string)` 函数，创建 better-sqlite3 + Drizzle 实例
-- `d1.ts`：导出 `createDb(d1Binding: D1Database)` 函数，创建 D1 + Drizzle 实例
-
-路由层 SHALL NOT 直接 import `db/index.ts`。
-
-#### Scenario: Node.js 工厂函数
-
-- **WHEN** 调用 `createDb(dbPath)` from `db/node.ts`
-- **THEN** SHALL 返回启用了 WAL 模式的 better-sqlite3 Drizzle 实例，目录不存在时自动创建
-
-#### Scenario: D1 工厂函数
-
-- **WHEN** 调用 `createDb(d1Binding)` from `db/d1.ts`
-- **THEN** SHALL 返回 Drizzle D1 实例，使用传入的 D1 binding
-
-### Requirement: BE-007 种子数据
-
-`apps/server` SHALL 提供种子数据用于初始化演示数据：
-- `src/db/seed.ts`：使用 Drizzle ORM insert API 插入种子数据，供 `pnpm db:seed` 本地使用
-- 云端播种：通过 `curl POST /api/tickets` 调用 API 端点创建数据（底层走 Drizzle ORM）
-
-数据 SHALL 覆盖全部 4 种状态（submitted / assigned / in_progress / completed）。
-
-#### Scenario: 本地播种
-
-- **WHEN** 在 `apps/server` 目录执行 `pnpm db:seed`
-- **THEN** 脚本 SHALL 使用 Drizzle ORM insert API 向本地 SQLite 插入至少 4 条 ticket，覆盖 submitted、assigned、in_progress、completed 四种 status 值
-
-#### Scenario: 云端播种
-
-- **WHEN** 部署成功后，通过 `curl POST /api/tickets` 创建演示数据
-- **THEN** API 端点 SHALL 通过 Drizzle ORM 向 D1 数据库插入数据，`GET /api/tickets` 返回至少 4 条记录
-

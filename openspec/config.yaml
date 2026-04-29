@@ -42,7 +42,9 @@ context: |
     - 环境变量通过 .env 管理，新增变量必须同步更新 .env.example
     - 新增 npm 依赖必须作为显式 task 偿明，不可隐含在其他 task 中
     - 数据库可移植约束: DB 相关代码（驱动、连接、pragma）必须收敛在 apps/server/src/db/ 目录内，禁止在路由/业务层直接引用数据库驱动或 SQLite 专属 API，确保 SQLite ↔ PostgreSQL 切换仅涉及 db/ 目录和 package.json
-    - 禁止原始 SQL: 全项目禁止手写 SQL 语句（包括测试文件中的 DELETE/FROM 等），所有数据库操作必须通过 Drizzle ORM API 完成，确保可移植性
+    - 服务器入口 SHALL 在启动时自动应用数据库迁移（调用 Drizzle migrate()），确保新环境开箱即用
+    - 迁移 SQL 文件 SHALL 使用 IF NOT EXISTS 确保幂等性，使 migrate() 在任何数据库历史状态下都安全执行
+    - 禁止原始 SQL: 全项目禁止手写 SQL 语句（包括测试文件中的 DELETE/FROM 等），所有数据库操作必须通过 Drizzle ORM API 完成，确保可移植性（迁移 SQL 文件由 drizzle-kit generate 生成，IF NOT EXISTS 除外）
     - 命名一致性: DB 列名统一 snake_case，JS/TS 属性名统一 camelCase，artifacts 中涉及字段名时必须明确标注映射关系（如 "created_by → createdBy"），禁止混用
     - API spec 完整性: 每个 API 端点在 spec 中必须覆盖三种场景：成功响应、输入校验失败（400）、资源不存在（404）
     - API 错误格式统一: 所有 API 错误响应统一使用 `{ error: string }` 格式
