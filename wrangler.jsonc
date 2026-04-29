@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "ticketflow-db",
-      "database_id": "PLACEHOLDER",
+      "database_id": "f74097dc-dcf9-4dce-a3a8-fae898ef4b0a",
       "migrations_dir": "apps/server/drizzle"
     }
   ]
