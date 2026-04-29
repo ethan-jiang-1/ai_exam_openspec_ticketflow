@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: WF-001 角色选择页 → 登录页
+### Requirement: WF-001 角色选择页
 
 `/login` 路由 SHALL 显示登录页（替代原 `/` 路由的角色选择页），包含三个可选用户（submitter / dispatcher / completer），使用 antd `Card` 组件（`hoverable` 属性）展示。数据来源为 `GET /api/auth/users` API 返回的用户列表。用户点击 Card 后 SHALL 调用 `POST /api/auth/login`（body: `{ username }`）完成登录，后端设置 cookie session，前端跳转到对应工作台 `/workbench/:role`。Card 使用 antd `Row` / `Col` 布局（`xs={24} sm={8}`），居中排列。
 

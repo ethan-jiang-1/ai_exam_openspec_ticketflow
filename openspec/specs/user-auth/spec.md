@@ -1,5 +1,8 @@
-## ADDED Requirements
+# user-auth Specification
 
+## Purpose
+TBD - created by archiving change mvp-user-auth. Update Purpose after archive.
+## Requirements
 ### Requirement: UA-001 users 表定义
 
 `apps/server/src/db/schema.ts` SHALL 定义 `users` 表，列映射如下：
@@ -94,7 +97,7 @@ Session ID SHALL 使用 `crypto.randomUUID()` 生成。
 
 ### Requirement: UA-006 Auth API — POST /api/auth/login
 
-`POST /api/auth/login` 接受 `{ username: string }` body，在 users 表查找该用户，创建 session，设置 `Set-Cookie` 响应头（name: `ticketflow-session`，value: session ID，`HttpOnly`，`SameSite=Lax`，`Path=/`），返回用户信息。
+`POST /api/auth/login` SHALL 接受 `{ username: string }` body，在 users 表查找该用户，创建 session，SHALL 设置 `Set-Cookie` 响应头（name: `ticketflow-session`，value: session ID，`HttpOnly`，`SameSite=Lax`，`Path=/`），SHALL 返回用户信息。
 
 #### Scenario: 登录成功
 
@@ -113,7 +116,7 @@ Session ID SHALL 使用 `crypto.randomUUID()` 生成。
 
 ### Requirement: UA-007 Auth API — POST /api/auth/logout
 
-`POST /api/auth/logout` 需要认证。从 cookie 读取 session ID，删除 session store 中的记录，设置 `Set-Cookie` 清除 cookie（`ticketflow-session=; Path=/; Max-Age=0`）。
+`POST /api/auth/logout` SHALL 要求认证。从 cookie 读取 session ID，SHALL 删除 session store 中的记录，SHALL 设置 `Set-Cookie` 清除 cookie（`ticketflow-session=; Path=/; Max-Age=0`）。
 
 #### Scenario: 退出成功
 
@@ -127,7 +130,7 @@ Session ID SHALL 使用 `crypto.randomUUID()` 生成。
 
 ### Requirement: UA-008 Auth API — GET /api/auth/me
 
-`GET /api/auth/me` 需要认证。从 cookie 读取 session ID，查找用户，返回用户信息。
+`GET /api/auth/me` SHALL 要求认证。从 cookie 读取 session ID，查找用户，SHALL 返回用户信息。
 
 #### Scenario: 已登录查询
 
@@ -325,3 +328,4 @@ interface AuthContextValue {
 
 - **WHEN** 在 `apps/web/src/` 中搜索
 - **THEN** `RoleSelect.tsx` 和 `RoleContext.tsx` SHALL 不存在
+
