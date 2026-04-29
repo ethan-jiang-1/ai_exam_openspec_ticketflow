@@ -5,7 +5,7 @@
 ## What Changes
 
 - 工单列表中状态字段改为带颜色的 Status badge（submitted=蓝、assigned=黄、in_progress=橙、completed=绿）
-- 工单列表中时间字段改为本地化格式（如 `2026/1/1 08:00`）
+- 工单列表中时间字段改为本地化格式（已在 change ③ 完成，本 change 不再涉及）
 - 新增集成测试：通过 API 测试完整工单流转（create → assign → start → complete），验证状态正确变迁
 - 在 README.md 的 Demo Roadmap 区域增加"2 分钟演示步骤"章节
 
@@ -17,12 +17,12 @@
 
 ### Modified Capabilities
 
-- `workflow`: 增加 Status badge 样式和时间格式化需求（WF-009, WF-010）
+- `workflow`: 增加 Status badge 样式需求（WF-009）
 
 ## Impact
 
 - `apps/web/src/App.css` — 新增 status badge 样式
-- `apps/web/src/pages/SubmitterWorkbench.tsx` — 使用 Status badge 组件和时间格式化
+- `apps/web/src/pages/SubmitterWorkbench.tsx` — 状态列使用 Status badge CSS 样式
 - `apps/web/src/pages/DispatcherWorkbench.tsx` — 同上
 - `apps/web/src/pages/CompleterWorkbench.tsx` — 同上
 - `apps/server/src/__tests__/integration.test.ts` — 新增集成测试
@@ -31,5 +31,5 @@
 ## Success Criteria
 
 - `pnpm -w run check` 全部通过（含新增集成测试）
-- 工单列表中状态显示为带颜色的 badge，时间显示为本地化格式
+- 工单列表中状态显示为带颜色的 badge
 - 陌生人按 README 演示步骤可在 2 分钟内跑通完整 Demo 流程

@@ -4,9 +4,9 @@
 
 ## 2. 页面更新（依赖 1.1）
 
-- [ ] 2.1 修改 `apps/web/src/pages/SubmitterWorkbench.tsx`，状态列使用 status badge class，时间列使用 `toLocaleString()` 格式化 [WF-009, WF-010]
-- [ ] 2.2 修改 `apps/web/src/pages/DispatcherWorkbench.tsx`，同上 [WF-009, WF-010]
-- [ ] 2.3 修改 `apps/web/src/pages/CompleterWorkbench.tsx`，同上 [WF-009, WF-010]
+- [ ] 2.1 修改 `apps/web/src/pages/SubmitterWorkbench.tsx`，状态列使用 status badge class [WF-009]
+- [ ] 2.2 修改 `apps/web/src/pages/DispatcherWorkbench.tsx`，同上 [WF-009]
+- [ ] 2.3 修改 `apps/web/src/pages/CompleterWorkbench.tsx`，同上 [WF-009]
 
 ## 3. 集成测试
 
@@ -18,4 +18,4 @@
 
 ## 5. 验证（依赖 2.1~2.3, 3.1）
 
-- [ ] 5.1 运行 `pnpm -w run check`（build + test + lint）确认全部通过 [DG-001, DG-002, WF-009, WF-010]
+- [ ] 5.1 运行 `pnpm -w run check`（build + test + lint）确认全部通过 [DG-001, DG-002, WF-009]
