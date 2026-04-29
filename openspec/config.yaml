@@ -63,6 +63,7 @@ context: |
     DT  = dev-tooling
     TKT = ticket
     WF  = workflow
+    DG  = demo-guide
     UA  = user-auth
 
   Spec 编写约定:
