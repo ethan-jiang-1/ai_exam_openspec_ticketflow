@@ -69,7 +69,7 @@ export default function CompleterWorkbench() {
             {tickets.map((t) => (
               <tr key={t.id}>
                 <td>{t.title}</td>
-                <td>{t.status}</td>
+                <td><span className={`status-badge status-${t.status}`}>{t.status}</span></td>
                 <td>{t.createdBy}</td>
                 <td>{new Date(t.createdAt).toLocaleString()}</td>
                 <td>

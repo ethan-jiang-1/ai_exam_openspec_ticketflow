@@ -75,7 +75,7 @@ export default function SubmitterWorkbench() {
           {tickets.map((t) => (
             <tr key={t.id}>
               <td>{t.title}</td>
-              <td>{t.status}</td>
+              <td><span className={`status-badge status-${t.status}`}>{t.status}</span></td>
               <td>{new Date(t.createdAt).toLocaleString()}</td>
             </tr>
           ))}
