@@ -10,14 +10,15 @@
 - `main`: `"./apps/server/src/worker.ts"`（指向 Workers 入口文件）
 - `assets.directory`: `"./apps/web/dist"`（指向 Vite 构建产物目录）
 - `assets.not_found_handling`: `"single-page-application"`（支持 React Router 客户端路由）
+- `assets.run_worker_first`: `["/api/*", "/health"]`（API 请求由 Worker 优先处理，其余走 assets + SPA 管道）
 - `d1_databases`: 包含一个 binding `DB`，`database_name` 为 `"ticketflow-db"`，`migrations_dir` 指向 `"apps/server/drizzle"`
 
-Worker 脚本处理 `/api/*` 和 `/health` 路由，未匹配请求 fall through 到静态资产。
+Worker 脚本通过 `run_worker_first` 配置处理 `/api/*` 和 `/health` 路由，未匹配请求走静态资产管道（含 SPA fallback）。
 
 #### Scenario: Wrangler 配置文件存在且格式正确
 
 - **WHEN** 检查仓库根目录
-- **THEN** SHALL 存在 `wrangler.jsonc` 文件，包含 `name`、`compatibility_date`、`main`、`assets`、`d1_databases` 顶层键
+- **THEN** SHALL 存在 `wrangler.jsonc` 文件，包含 `name`、`compatibility_date`、`main`、`assets`（含 `directory`、`not_found_handling`、`run_worker_first`）、`d1_databases` 配置项
 
 #### Scenario: 部署目标包含前后端
 

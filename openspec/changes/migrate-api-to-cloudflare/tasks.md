@@ -33,7 +33,7 @@
 
 ## 7. Wrangler 配置 [DT-007]
 
-- [ ] 7.1 修改 `wrangler.jsonc`：添加 `main: "./apps/server/src/worker.ts"`、`d1_databases` 绑定（binding: "DB", database_name: "ticketflow-db", migrations_dir: "apps/server/drizzle"）、保留现有 assets 配置 — [DT-007]
+- [ ] 7.1 修改 `wrangler.jsonc`：添加 `main: "./apps/server/src/worker.ts"`、`d1_databases` 绑定（binding: "DB", database_name: "ticketflow-db", migrations_dir: "apps/server/drizzle"）、在 assets 中添加 `run_worker_first: ["/api/*", "/health"]`、保留现有 assets.directory 和 not_found_handling — [DT-007]
 
 ## 8. 种子数据 [BE-007]
 
