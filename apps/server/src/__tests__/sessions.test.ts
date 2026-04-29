@@ -16,6 +16,11 @@ describe('SessionStore', () => {
     expect(typeof session!.createdAt).toBe('number')
   })
 
+  it('generates UUID v4 format session IDs', () => {
+    const id = store.create('user-1')
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+
   it('destroys a session', () => {
     const id = store.create('user-1')
     store.destroy(id)
