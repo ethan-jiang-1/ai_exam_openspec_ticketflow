@@ -32,8 +32,14 @@ ticketsRoute.post('/', async (c) => {
   if (!body.title || body.title.trim() === '') {
     return c.json({ error: 'title is required' }, 400)
   }
+  if (body.title.length > 200) {
+    return c.json({ error: 'title must be at most 200 characters' }, 400)
+  }
   if (!body.createdBy || body.createdBy.trim() === '') {
     return c.json({ error: 'createdBy is required' }, 400)
+  }
+  if (body.description && body.description.length > 2000) {
+    return c.json({ error: 'description must be at most 2000 characters' }, 400)
   }
 
   const now = new Date().toISOString()

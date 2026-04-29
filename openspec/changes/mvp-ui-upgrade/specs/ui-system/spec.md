@@ -76,3 +76,48 @@ UI 重构后，`apps/web/src/__tests__/RoleSelect.test.tsx` 和 `apps/web/src/__
 
 - **WHEN** antd Table 渲染任意数量的工单（包括 >10 条）
 - **THEN** Table 底部 SHALL 不显示分页控件，所有数据行 SHALL 直接展示
+
+### Requirement: US-008 响应式列隐藏
+
+调度者和完成者工作台的 antd Table 中 "创建者" 和 "创建时间" 列 SHALL 设置 `responsive: ['lg']`，仅在 lg（≥ 1024px）断点以上显示。提交者工作台的 "创建时间" 列 SHALL 同样设置 `responsive: ['lg']`。窄屏下三个工作台均只显示标题、状态（及操作列，如有）。
+
+#### Scenario: 窄屏隐藏次要列
+
+- **WHEN** 浏览器窗口宽度 < 1024px
+- **THEN** 调度者和完成者工作台的 Table SHALL 不显示 "创建者" 和 "创建时间" 列，提交者工作台的 Table SHALL 不显示 "创建时间" 列
+
+### Requirement: US-009 操作列固定右侧
+
+调度者和完成者工作台的 antd Table 操作列 SHALL 设置 `fixed: 'right'` 和 `width: 200`（调度者）/ `width: 120`（完成者），确保窄屏下操作按钮始终可见。
+
+#### Scenario: 窄屏操作列始终可见
+
+- **WHEN** 浏览器窗口宽度较窄，标题列内容较长
+- **THEN** 操作列 SHALL 固定在表格右侧，不被挤出视野
+
+### Requirement: US-010 标题列超长截断
+
+所有工作台的 antd Table 标题列 SHALL 设置 `ellipsis: true` 和 `width`（百分比或固定值），超长标题截断显示省略号，鼠标悬停 SHALL 显示 tooltip 全文。
+
+#### Scenario: 超长标题截断
+
+- **WHEN** 工单标题超过标题列宽度
+- **THEN** 标题列 SHALL 显示截断后的文本 + 省略号，鼠标悬停 SHALL 显示完整标题
+
+### Requirement: US-011 角色选择页响应式
+
+角色选择页的 antd `Col` SHALL 设置 `xs={24} sm={8}`，窄屏（< 576px）下 Card 纵向堆叠，宽屏横向排列。Card 不设固定 `width`。
+
+#### Scenario: 窄屏 Card 堆叠
+
+- **WHEN** 浏览器窗口宽度 < 576px
+- **THEN** 3 张角色 Card SHALL 纵向堆叠，每张占满整行宽度
+
+### Requirement: US-012 测试环境 antd mock
+
+`apps/web/src/setup-tests.ts` SHALL 添加 `window.matchMedia` 和 `ResizeObserver` 的 mock 实现，确保 antd 组件在 jsdom 测试环境中正常渲染。
+
+#### Scenario: antd 组件在测试中不报错
+
+- **WHEN** 运行 `pnpm test`
+- **THEN** 包含 antd Table/Row/Card 的测试 SHALL 不抛出 `matchMedia is not a function` 或 `ResizeObserver is not defined` 错误

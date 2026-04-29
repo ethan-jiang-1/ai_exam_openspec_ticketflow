@@ -42,6 +42,20 @@ describe('Tickets API', () => {
       const body = await res.json()
       expect(body).toHaveProperty('error')
     })
+
+    it('should reject title exceeding 200 characters with 400', async () => {
+      const res = await createTicket({ title: 'A'.repeat(201) })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body).toHaveProperty('error')
+    })
+
+    it('should reject description exceeding 2000 characters with 400', async () => {
+      const res = await createTicket({ description: 'B'.repeat(2001) })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body).toHaveProperty('error')
+    })
   })
 
   describe('GET /api/tickets', () => {

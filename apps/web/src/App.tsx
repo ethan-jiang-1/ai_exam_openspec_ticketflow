@@ -4,7 +4,6 @@ import RoleSelect from './pages/RoleSelect'
 import SubmitterWorkbench from './pages/SubmitterWorkbench'
 import DispatcherWorkbench from './pages/DispatcherWorkbench'
 import CompleterWorkbench from './pages/CompleterWorkbench'
-import './App.css'
 
 function App() {
   return (

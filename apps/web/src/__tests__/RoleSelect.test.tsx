@@ -1,13 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { ConfigProvider } from 'antd'
+import { App as AntdApp } from 'antd'
 import { RoleProvider } from '../context/RoleContext'
 import RoleSelect from '../pages/RoleSelect'
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <MemoryRouter>
-      <RoleProvider>{ui}</RoleProvider>
+      <ConfigProvider>
+        <AntdApp>
+          <RoleProvider>{ui}</RoleProvider>
+        </AntdApp>
+      </ConfigProvider>
     </MemoryRouter>,
   )
 }
@@ -17,7 +23,7 @@ describe('RoleSelect', () => {
     localStorage.clear()
   })
 
-  it('renders three role buttons', () => {
+  it('renders three role cards', () => {
     renderWithProviders(<RoleSelect />)
     expect(screen.getByText('提交者')).toBeInTheDocument()
     expect(screen.getByText('调度者')).toBeInTheDocument()

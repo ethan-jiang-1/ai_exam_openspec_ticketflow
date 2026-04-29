@@ -40,7 +40,7 @@
 
 ### Requirement: WF-003 提交者工作台
 
-`/workbench/submitter` SHALL 显示提交者工作台，包含：antd `Form` 创建工单表单（`Form.Item` + `Input` 标题 + `Input.TextArea` 描述 + antd `Button` 提交按钮，标题字段通过 antd Form `rules` 配置 `required` 验证）和 antd `Table` 工单列表（`pagination={false}`）。工单列表 SHALL 仅显示 `createdBy === "submitter"` 的工单（通过 `getTickets()` 获取全部后在客户端过滤）。
+`/workbench/submitter` SHALL 显示提交者工作台，包含：antd `Form` 创建工单表单（居中布局 `maxWidth: 480px`，`Form.Item` + `Input` 标题（`maxLength={200}`、`showCount`、`rules: [{ required: true }, { max: 200 }]`）+ `Input.TextArea` 描述（`maxLength={2000}`、`showCount`、`rules: [{ max: 2000 }]`）+ antd `Button` 提交按钮）和 antd `Table` 工单列表（`pagination={false}`，"创建时间"列 `responsive: ['lg']`）。工单列表 SHALL 仅显示 `createdBy === "submitter"` 的工单（通过 `getTickets()` 获取全部后在客户端过滤）。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出 antd `Drawer`（宽度 480px）显示工单详情，使用 antd `Descriptions`（`column={1}`、`bordered`、`size="small"`）展示状态（Tag + 中文标签）、创建者、指派给、创建时间、描述。
 
 #### Scenario: 创建工单
 
@@ -57,14 +57,24 @@
 - **WHEN** title 输入框为空，用户尝试提交
 - **THEN** antd Form SHALL 显示必填验证提示，不发送 API 请求
 
+#### Scenario: 超长 title/description 前端校验拦截
+
+- **WHEN** 用户输入 title 超过 200 字符或 description 超过 2000 字符并提交
+- **THEN** antd Form SHALL 显示字数超限验证提示，Input/TextArea 的 `maxLength` SHALL 阻止继续输入
+
 #### Scenario: API 调用失败时显示错误
 
 - **WHEN** 创建工单或获取工单列表时后端返回错误
 - **THEN** SHALL 通过 `AntdApp.useApp()` hook 获取的 `message` 实例显示错误提示信息，页面不白屏
 
+#### Scenario: 点击标题弹出 Drawer 查看详情
+
+- **WHEN** 提交者在工单列表中点击某条工单的标题
+- **THEN** SHALL 弹出 antd Drawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、创建时间、描述
+
 ### Requirement: WF-004 调度者工作台
 
-`/workbench/dispatcher` SHALL 显示所有未完成状态的工单（通过 `getTickets()` 获取全部后在客户端按 `status !== 'completed'` 过滤），使用 antd `Table`（`pagination={false}`）展示。
+`/workbench/dispatcher` SHALL 显示所有未完成状态的工单（通过 `getTickets()` 获取全部后在客户端按 `status !== 'completed'` 过滤），使用 antd `Table`（`pagination={false}`、`scroll={{ x: 'max-content' }}`）展示。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出 antd `Drawer`（宽度 480px）显示工单详情，使用 antd `Descriptions`（`column={1}`、`bordered`、`size="small"`）展示状态（Tag + 中文标签）、创建者、指派给、创建时间、描述。"创建者"和"创建时间"列 SHALL 设置 `responsive: ['lg']`。
 
 - `submitted` 状态的工单：操作列显示 antd `Select`（选项为 `completer`）和 antd `Button` "指派"
 - `assigned` 状态的工单：操作列显示文本 "已指派给 {assignedTo}"，无操作按钮
@@ -95,9 +105,14 @@
 - **WHEN** 指派或获取工单列表时后端返回错误
 - **THEN** SHALL 通过 `AntdApp.useApp()` hook 获取的 `message` 实例显示错误提示信息，页面不白屏
 
+#### Scenario: 点击标题弹出 Drawer 查看详情
+
+- **WHEN** 调度者在工单列表中点击某条工单的标题
+- **THEN** SHALL 弹出 antd Drawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、创建时间、描述
+
 ### Requirement: WF-005 完成者工作台
 
-`/workbench/completer` SHALL 显示所有 `assignedTo === "completer"` 且状态为 `assigned` 或 `in_progress` 的工单（通过 `getTickets()` 获取全部后在客户端过滤），使用 antd `Table`（`pagination={false}`）展示。`assigned` 状态的工单操作列有 antd `Button` "开始处理"，`in_progress` 状态的工单操作列有 antd `Button` "完成"。
+`/workbench/completer` SHALL 显示所有 `assignedTo === "completer"` 且状态为 `assigned` 或 `in_progress` 的工单（通过 `getTickets()` 获取全部后在客户端过滤），使用 antd `Table`（`pagination={false}`、`scroll={{ x: 'max-content' }}`）展示。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出 antd `Drawer`（宽度 480px）显示工单详情，使用 antd `Descriptions`（`column={1}`、`bordered`、`size="small"`）展示状态（Tag + 中文标签）、创建者、指派给、创建时间、描述。`assigned` 状态的工单操作列有 antd `Button` "开始处理"，`in_progress` 状态的工单操作列有 antd `Button` "完成"。"创建者"和"创建时间"列 SHALL 设置 `responsive: ['lg']`。
 
 #### Scenario: 开始处理工单
 
@@ -118,6 +133,11 @@
 
 - **WHEN** 开始处理、完成或获取工单列表时后端返回错误
 - **THEN** SHALL 通过 `AntdApp.useApp()` hook 获取的 `message` 实例显示错误提示信息，页面不白屏
+
+#### Scenario: 点击标题弹出 Drawer 查看详情
+
+- **WHEN** 完成者在工单列表中点击某条工单的标题
+- **THEN** SHALL 弹出 antd Drawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、创建时间、描述
 
 ### Requirement: WF-009 Status badge 样式
 
