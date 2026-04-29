@@ -394,3 +394,112 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 | `backend-env/spec.md` (BE-003) | Drizzle ORM + 双 DB 后端、IF NOT EXISTS |
 | `backend-env/spec.md` (BE-006) | DB 工厂模式 |
 | `dev-tooling/spec.md` (DT-007) | 通用部署配置（静态资产） |
+
+---
+
+## 9. 云端数据库迁移 & 播种快速参考
+
+> **现状**：Cloudflare Workers Builds 只部署代码和静态资产，**不会自动执行数据库迁移和播种**。
+> 每次涉及 schema 变更的部署后，必须手动在 D1 Console 完成这两步。
+> 本地 `index.ts` 启动时自动 migrate + seed，但云端 `worker.ts` 没有这个能力。
+
+### 9.1 每次部署后的操作流程
+
+```
+git push (master)
+     │
+     ▼
+Cloudflare 自动构建部署 ←── 代码部署 ✓，数据库不动 ✗
+     │
+     ├── 如果本次变更涉及 schema 变化 ──→ 去做 9.2（迁移）
+     ├── 如果本次变更涉及新数据 ──────→ 去做 9.3（播种）
+     └── 如果只是前端/逻辑变更 ──────→ 无需操作
+```
+
+**如何判断是否涉及 schema 变化：**
+- `apps/server/src/db/schema.ts` 有改动 → 需要迁移
+- `apps/server/drizzle/` 下有新 SQL 文件 → 需要迁移
+- `apps/server/src/db/seed.ts` 有改动 → 可能需要重新播种
+
+### 9.2 迁移：在 D1 Console 执行 SQL
+
+路径：Dashboard → Workers & Pages → D1 → ticketflow-db → Console
+
+**全部迁移 SQL（按顺序，可重复执行，IF NOT EXISTS 保证幂等）：**
+
+```sql
+-- 0000: tickets 表
+CREATE TABLE IF NOT EXISTS `tickets` (
+  `id` text PRIMARY KEY NOT NULL,
+  `title` text NOT NULL,
+  `description` text NOT NULL,
+  `status` text DEFAULT 'submitted' NOT NULL,
+  `created_by` text NOT NULL,
+  `assigned_to` text,
+  `created_at` text NOT NULL,
+  `updated_at` text NOT NULL
+);
+```
+
+```sql
+-- 0001: users 表
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` text PRIMARY KEY NOT NULL,
+  `username` text NOT NULL,
+  `display_name` text NOT NULL,
+  `role` text NOT NULL,
+  `created_at` text NOT NULL
+);
+```
+
+```sql
+-- 0002: users username 唯一索引
+CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);
+```
+
+> **Tips**: 因为全部使用 `IF NOT EXISTS`，你可以把三条 SQL 全部粘贴执行，已存在的会自动跳过。
+> 新迁移文件加入后，只需追加执行新的一条即可。
+
+### 9.3 播种：插入预置用户
+
+路径同上，D1 Console 执行：
+
+```sql
+INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `created_at`) VALUES
+  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', '2026-01-01T00:00:00Z');
+```
+
+> `INSERT OR IGNORE` 保证可重复执行（username 已存在则跳过）。
+
+**播种 tickets（可选）：**
+
+登录获取 cookie 后通过 API 创建（`createdBy` 由后端从 session 自动获取）：
+
+```bash
+curl -c cookies.txt -X POST https://<域名>/api/auth/login \
+  -H 'Content-Type: application/json' -d '{"username": "submitter"}'
+
+curl -b cookies.txt -X POST https://<域名>/api/tickets \
+  -H 'Content-Type: application/json' \
+  -d '{"title": "Fix login page styling", "description": "Overflow on narrow screens"}'
+```
+
+### 9.4 踩坑记录
+
+| 时间 | 问题 | 原因 | 解决 |
+|------|------|------|------|
+| mvp-user-auth | 部署后登录页空白 | D1 没有 `users` 表 | Console 执行 0001 + 0002 SQL |
+| mvp-user-auth | `Could not resolve "crypto"` | `sessions.ts` 用了 Node.js 专属 import | 改用全局 `crypto.randomUUID()`（fix-cloudflare-crypto） |
+| mvp-user-auth | `migrate()` 本地 crash | 迁移文件含多条 SQL | 拆分为单语句文件（0001 + 0002） |
+| 日常 | Cloudflare 构建用旧 commit | 短时间多次 push，中间构建失败 | Dashboard 点 Rebuild 用最新 commit |
+| 日常 | Wrangler CLI auth 失败 | 非交互环境无法 login | 用 Dashboard Console 替代 |
+
+### 9.5 未来改进方向
+
+当前云端迁移和播种都是手动操作，后续可考虑：
+
+1. **自动迁移**：在 deploy command 前加 `npx wrangler d1 migrations apply ticketflow-db --remote`（需配置 `CLOUDFLARE_API_TOKEN`）
+2. **自动播种**：新增一个 `/api/admin/seed` 端点（需认证 + 管理员角色），首次部署后调用一次
+3. **构建时验证**：在 CI 中增加 `wrangler deploy --dry-run` 步骤，提前发现打包问题
