@@ -1,3 +1,8 @@
+# demo-guide Specification
+
+## Purpose
+演示数据与集成测试指南：确保工单流转（submitted → assigned → in_progress → completed）在本地和云端均可完整演示。
+## Requirements
 ### Requirement: DG-001 集成测试
 
 `apps/server/src/__tests__/integration.test.ts` SHALL 包含完整工单流转的集成测试，通过 `app.request()` 依次执行以下操作并验证状态变迁：

@@ -1,5 +1,7 @@
 # ticket Specification
 
+## Purpose
+工单数据模型定义与 CRUD API 规范。
 ## Requirements
 
 ### Requirement: TKT-001 Tickets 表定义

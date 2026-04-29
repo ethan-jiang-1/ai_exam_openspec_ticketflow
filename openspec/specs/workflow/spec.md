@@ -1,3 +1,8 @@
+# workflow Specification
+
+## Purpose
+前端工单流转工作台规范：角色选择、三个角色工作台（提交者/调度者/完成者）、API Client 封装、路由挂载和 UI 组件。
+## Requirements
 ### Requirement: WF-001 角色选择页
 
 `/` 路由 SHALL 显示角色选择页，包含三个可选角色（submitter / dispatcher / completer），用户点击后 SHALL 将角色存入 `localStorage`（key: `ticketflow-role`）并跳转到对应工作台 `/workbench/:role`。

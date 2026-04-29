@@ -64,7 +64,6 @@ context: |
     TKT = ticket
     WF  = workflow
     DG  = demo-guide
-    UA  = user-auth
     CF  = cloudflare-deploy
 
   Spec 编写约定:
