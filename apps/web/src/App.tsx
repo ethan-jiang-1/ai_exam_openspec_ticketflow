@@ -1,20 +1,51 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Spin } from 'antd'
+import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
-import RoleSelect from './pages/RoleSelect'
+import LoginPage from './pages/LoginPage'
 import SubmitterWorkbench from './pages/SubmitterWorkbench'
 import DispatcherWorkbench from './pages/DispatcherWorkbench'
 import CompleterWorkbench from './pages/CompleterWorkbench'
 
+function ProtectedLayout() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}><Spin size="large" /></div>
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <Layout />
+}
+
+function WorkbenchGuard({ role, children }: { role: string; children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (user && user.role !== role) {
+    return <Navigate to={`/workbench/${user.role}`} replace />
+  }
+  return <>{children}</>
+}
+
 function App() {
+  const { loading } = useAuth()
+
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}><Spin size="large" /></div>
+  }
+
   return (
     <Routes>
-      <Route path="/" element={<RoleSelect />} />
-      <Route path="/workbench" element={<Layout />}>
-        <Route path="submitter" element={<SubmitterWorkbench />} />
-        <Route path="dispatcher" element={<DispatcherWorkbench />} />
-        <Route path="completer" element={<CompleterWorkbench />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/workbench" element={<ProtectedLayout />}>
+        <Route path="submitter" element={<WorkbenchGuard role="submitter"><SubmitterWorkbench /></WorkbenchGuard>} />
+        <Route path="dispatcher" element={<WorkbenchGuard role="dispatcher"><DispatcherWorkbench /></WorkbenchGuard>} />
+        <Route path="completer" element={<WorkbenchGuard role="completer"><CompleterWorkbench /></WorkbenchGuard>} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }

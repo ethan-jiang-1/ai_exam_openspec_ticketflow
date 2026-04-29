@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Form, Input, Button, Table, Tag, Drawer, Descriptions, App as AntdApp } from 'antd'
 import { getTickets, createTicket } from '../api/client'
+import { useAuth } from '../context/AuthContext'
 import type { Ticket } from '@ticketflow/shared'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -23,11 +24,12 @@ export default function SubmitterWorkbench() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [form] = Form.useForm()
   const { message } = AntdApp.useApp()
+  const { user } = useAuth()
 
   const fetchTickets = async () => {
     try {
       const all = await getTickets()
-      setTickets(all.filter((t) => t.createdBy === 'submitter'))
+      setTickets(all.filter((t) => t.createdBy === user?.username))
     } catch (e) {
       message.error(e instanceof Error ? e.message : '获取工单失败')
     }
@@ -35,12 +37,12 @@ export default function SubmitterWorkbench() {
 
   useEffect(() => {
     fetchTickets()
-  }, [])
+  }, [user])
 
   const handleSubmit = async (values: { title: string; description?: string }) => {
     try {
       setLoading(true)
-      await createTicket({ title: values.title.trim(), description: (values.description ?? '').trim(), createdBy: 'submitter' })
+      await createTicket({ title: values.title.trim(), description: (values.description ?? '').trim() })
       form.resetFields()
       await fetchTickets()
     } catch (e) {

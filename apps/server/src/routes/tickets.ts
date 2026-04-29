@@ -2,19 +2,20 @@ import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { tickets } from '../db/schema'
 import type { TicketStatus } from '@ticketflow/shared'
-import type { DbVariables } from '../db/types'
+import type { AuthVariables } from '../db/types'
+import { requireAuth } from '../middleware/auth'
 
-const ticketsRoute = new Hono<DbVariables>()
+const ticketsRoute = new Hono<AuthVariables>()
 
 // GET /api/tickets
-ticketsRoute.get('/', async (c) => {
+ticketsRoute.get('/', requireAuth, async (c) => {
   const db = c.get('db')
   const result = await db.select().from(tickets)
   return c.json(result)
 })
 
 // GET /api/tickets/:id
-ticketsRoute.get('/:id', async (c) => {
+ticketsRoute.get('/:id', requireAuth, async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const result = await db.select().from(tickets).where(eq(tickets.id, id))
@@ -25,18 +26,16 @@ ticketsRoute.get('/:id', async (c) => {
 })
 
 // POST /api/tickets
-ticketsRoute.post('/', async (c) => {
+ticketsRoute.post('/', requireAuth, async (c) => {
   const db = c.get('db')
-  const body = await c.req.json<{ title?: string; description?: string; createdBy?: string }>()
+  const user = c.get('user')!
+  const body = await c.req.json<{ title?: string; description?: string }>()
 
   if (!body.title || body.title.trim() === '') {
     return c.json({ error: 'title is required' }, 400)
   }
   if (body.title.length > 200) {
     return c.json({ error: 'title must be at most 200 characters' }, 400)
-  }
-  if (!body.createdBy || body.createdBy.trim() === '') {
-    return c.json({ error: 'createdBy is required' }, 400)
   }
   if (body.description && body.description.length > 2000) {
     return c.json({ error: 'description must be at most 2000 characters' }, 400)
@@ -48,7 +47,7 @@ ticketsRoute.post('/', async (c) => {
     title: body.title,
     description: body.description ?? '',
     status: 'submitted' satisfies TicketStatus,
-    createdBy: body.createdBy,
+    createdBy: user.username,
     assignedTo: null,
     createdAt: now,
     updatedAt: now,
@@ -59,7 +58,7 @@ ticketsRoute.post('/', async (c) => {
 })
 
 // PATCH /api/tickets/:id/assign
-ticketsRoute.patch('/:id/assign', async (c) => {
+ticketsRoute.patch('/:id/assign', requireAuth, async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
@@ -85,7 +84,7 @@ ticketsRoute.patch('/:id/assign', async (c) => {
 })
 
 // PATCH /api/tickets/:id/start
-ticketsRoute.patch('/:id/start', async (c) => {
+ticketsRoute.patch('/:id/start', requireAuth, async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
@@ -106,7 +105,7 @@ ticketsRoute.patch('/:id/start', async (c) => {
 })
 
 // PATCH /api/tickets/:id/complete
-ticketsRoute.patch('/:id/complete', async (c) => {
+ticketsRoute.patch('/:id/complete', requireAuth, async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))

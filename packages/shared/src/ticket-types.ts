@@ -36,3 +36,13 @@ export interface Ticket {
   createdAt: string
   updatedAt: string
 }
+
+// --- User ---
+
+export interface User {
+  id: string
+  username: string
+  displayName: string
+  role: Role
+  createdAt: string
+}

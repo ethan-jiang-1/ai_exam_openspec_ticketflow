@@ -5,7 +5,7 @@ context: |
   Project: TicketFlow - 工单流程处理工具
   Tech stack: TypeScript full-stack (React + Hono + Drizzle + SQLite)
   Monorepo: pnpm workspaces (apps/web, apps/server, packages/shared)
-  Auth: simple username/password
+  Auth: cookie-based session (username-only login, no password)
   Database: SQLite (better-sqlite3)
   ORM: Drizzle ORM
   Frontend: React 19 + Vite 8
@@ -19,23 +19,47 @@ context: |
 
     apps/web/          — 前端 React 应用
       src/             — 页面组件、hooks、样式
-      src/__tests__/   — 前端单元测试
+      src/__tests__/   — 前端单元测试 + 组件测试（vitest + @testing-library/react）
       public/          — 静态资源
 
     apps/server/       — 后端 Hono API 服务
       src/routes/      — API 路由（每个资源一个文件，如 tickets.ts）
       src/db/          — 数据库连接、Drizzle schema、迁移
-      src/__tests__/   — 后端单元测试
+      src/__tests__/   — 后端单元测试 + API 集成测试（vitest + Hono app.request）
       src/middleware/   — Hono 中间件（如有）
 
     packages/shared/   — 前后端共享类型
       src/             — 类型定义、常量、工具函数
-      src/__tests__/   — 共享包测试
+      src/__tests__/   — 共享包单元测试
 
     根目录              — 仅放配置文件（package.json, tsconfig, eslint, prettier 等）
     openspec/          — 规范文档，禁止放代码
 
+  根目录级脚本与测试:
+    scripts/           — 运维脚本、E2E 烟测等跨 workspace 的自动化工具
+      e2e-smoke.mjs   — E2E 烟测：启动真实后端 → seed → 完整流程验证，无外部依赖
+    tests/e2e/         — （未来）Playwright 端到端测试，需启动真实前后端 + 浏览器
+                        引入 Playwright 后从此目录管理，与 scripts/e2e-smoke.mjs 互补
+    docs/              — 运维文档（部署手册、操作指南等），禁止放代码
+
   Coding Conventions (编码约定):
+    - TDD 流程: 先写失败测试 (Red) → 再写实现使其通过 (Green) → 最后重构 (Refactor)。实现代码必须由测试驱动，禁止先写实现后补测试
+    - 测试层级策略:
+        单元测试 (unit): 测试单个函数/类/工具方法，无外部依赖（无 DB、无网络、无 DOM）
+          - 纯逻辑验证：SessionStore 的 CRUD、共享类型校验、工具函数
+          - 位置: src/__tests__/，文件名格式 <module>.test.ts
+          - 隔离: 不涉及数据库的纯内存测试，无需 beforeEach 清空
+        集成测试 (integration): 测试多个模块协作，涉及真实依赖（内存 DB、真实 Hono app）
+          - API 端点测试：通过 app.request() 发请求，验证完整请求-响应链（含中间件、认证、DB 操作）
+          - 位置: src/__tests__/，文件名格式 <resource>.test.ts（如 auth.test.ts、tickets.test.ts）
+          - 隔离: 内存 SQLite + beforeEach 通过 ORM API 清空数据 + 通过 POST /api/auth/login 获取 session cookie
+        组件测试 (component): 前端页面/组件的交互测试，模拟用户操作
+          - 通过 @testing-library/react 的 render/fireEvent/waitFor 验证 UI 行为
+          - mock fetch 模拟 API 响应，验证渲染、过滤、点击交互
+          - 位置: apps/web/src/__tests__/，文件名格式 <page>.test.tsx
+        E2E 测试 (e2e): 完整用户流程测试，启动真实前后端
+          - 当前：scripts/e2e-smoke.mjs（Node.js 脚本，启动真实后端验证 API 级完整流程）
+          - 未来：引入 Playwright 后在 tests/e2e/ 目录管理浏览器级 E2E，与 smoke 脚本互补
     - 测试文件放 src/__tests__/ 目录，与源文件同 workspace
     - 新增路由必须在 apps/server/src/app.ts 中挂载
     - 共享类型变更流程: 先改 packages/shared → 再改消费方 (web/server)
@@ -44,11 +68,14 @@ context: |
     - 数据库可移植约束: DB 相关代码（驱动、连接、pragma）必须收敛在 apps/server/src/db/ 目录内，禁止在路由/业务层直接引用数据库驱动或 SQLite 专属 API，确保 SQLite ↔ PostgreSQL 切换仅涉及 db/ 目录和 package.json
     - 服务器入口 SHALL 在启动时自动应用数据库迁移（调用 Drizzle migrate()），确保新环境开箱即用
     - 迁移 SQL 文件 SHALL 使用 IF NOT EXISTS 确保幂等性，使 migrate() 在任何数据库历史状态下都安全执行
+    - 迁移 SQL 文件每个文件仅包含一条 SQL 语句，避免 better-sqlite3 prepare() 的多语句限制
     - 禁止原始 SQL: 全项目禁止手写 SQL 语句（包括测试文件中的 DELETE/FROM 等），所有数据库操作必须通过 Drizzle ORM API 完成，确保可移植性（迁移 SQL 文件由 drizzle-kit generate 生成，IF NOT EXISTS 除外）
     - 命名一致性: DB 列名统一 snake_case，JS/TS 属性名统一 camelCase，artifacts 中涉及字段名时必须明确标注映射关系（如 "created_by → createdBy"），禁止混用
     - API spec 完整性: 每个 API 端点在 spec 中必须覆盖三种场景：成功响应、输入校验失败（400）、资源不存在（404）
     - API 错误格式统一: 所有 API 错误响应统一使用 `{ error: string }` 格式
     - 测试隔离: 涉及数据库的测试必须在 beforeEach 中通过 ORM API 清空数据，确保测试间互不污染
+    - 认证测试适配: 所有需要认证的 API 测试必须在 beforeEach 中通过 POST /api/auth/login 获取有效 session cookie，并在后续请求中携带该 cookie，禁止绕过认证中间件
+    - 测试覆盖率要求: 每个新增 API 端点必须有对应的测试覆盖（成功路径 + 错误路径），每个新增前端组件/页面必须有交互测试覆盖
     - 前端 API 错误场景: 前端页面/组件涉及 API 调用时，spec 必须覆盖 API 调用失败场景（显示错误提示、非白屏、用户可恢复），不可只写正常路径
     - 客户端数据过滤显式声明: 页面在客户端过滤数据时（非服务端过滤），spec 必须明确声明：(1) 数据来源（如 getTickets() 返回全部），(2) 过滤条件（如 status === "submitted"），(3) 过滤在客户端执行
 

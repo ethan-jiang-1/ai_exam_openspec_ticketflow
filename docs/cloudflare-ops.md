@@ -32,7 +32,7 @@ Cloudflare Workers Builds ──── 自动构建部署
 | 数据库 | better-sqlite3 (本地文件) | D1 (云端 binding) |
 | DB 来源 | `createDb(dbPath)` | `c.env.DB` D1 binding |
 | 迁移 | 启动时自动 `migrate()` | **不会自动执行** |
-| 播种 | `pnpm db:seed` | `curl POST /api/tickets` |
+| 播种 | `pnpm db:seed`（users + tickets） | D1 Console 插入 users + `curl POST /api/tickets` |
 
 `app.ts` 是运行时无关的——路由层通过 `c.get('db')` 获取数据库，不感知底层驱动。
 
@@ -147,9 +147,10 @@ npx wrangler d1 migrations apply ticketflow-db --remote
 
 ### 3.4 当前表结构
 
-只有 1 张业务表：
+2 张业务表：
 
 ```sql
+-- 0000: 初始 tickets 表
 CREATE TABLE IF NOT EXISTS `tickets` (
   `id` text PRIMARY KEY NOT NULL,
   `title` text NOT NULL,
@@ -160,6 +161,22 @@ CREATE TABLE IF NOT EXISTS `tickets` (
   `created_at` text NOT NULL,
   `updated_at` text NOT NULL
 );
+```
+
+```sql
+-- 0001: users 表（mvp-user-auth 新增）
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` text PRIMARY KEY NOT NULL,
+  `username` text NOT NULL,
+  `display_name` text NOT NULL,
+  `role` text NOT NULL,
+  `created_at` text NOT NULL
+);
+```
+
+```sql
+-- 0002: users 表 username 唯一索引
+CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);
 ```
 
 D1 中的系统表（正常，勿删）：
@@ -185,6 +202,21 @@ D1 中的系统表（正常，勿删）：
 
 这是 config.yaml 的编码约定。
 
+### 3.6 迁移历史
+
+| 文件 | 内容 | 来源 |
+|------|------|------|
+| `0000_rainy_doctor_doom.sql` | tickets 表（初始） | drizzle-kit generate |
+| `0001_create_users.sql` | users 表 | mvp-user-auth（手写） |
+| `0002_users_username_idx.sql` | users.username 唯一索引 | mvp-user-auth（手写） |
+
+**每次新增迁移文件后需要做的事：**
+1. 在 `meta/_journal.json` 的 `entries` 数组末尾追加一条 `{idx, version, when, tag, breakpoints}` 记录
+2. 确保文件只包含一条 SQL 语句
+3. 确保使用 `IF NOT EXISTS`
+4. 本地验证：删掉 `data/ticketflow.db` → 重启 dev server → 表自动创建
+5. 云端：Dashboard → D1 → Console → 执行新迁移 SQL
+
 ---
 
 ## 4. 数据播种
@@ -199,21 +231,38 @@ cd apps/server && pnpm db:seed
 
 ### 云端
 
-D1 无法直接跑 seed.ts（Workers 无文件系统）。通过 API 端点播种：
+D1 无法直接跑 seed.ts（Workers 无文件系统）。分两步：
 
-```bash
-# 逐条创建（或写脚本批量）
-curl -X POST https://<你的域名>/api/tickets \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "Fix login page styling on mobile",
-    "description": "The login form overflows on screens narrower than 375px",
-    "status": "submitted",
-    "createdBy": "alice"
-  }'
+**步骤 1：在 D1 Console 插入预置用户**
+
+Dashboard → D1 → ticketflow-db → Console，执行：
+
+```sql
+INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `created_at`) VALUES
+  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', '2026-01-01T00:00:00Z');
 ```
 
-底层走 Drizzle ORM → D1，不涉及原始 SQL。
+> 注意：此处使用 `INSERT OR IGNORE` 确保 D1 Console 可重复执行（与 ORM 的 existence check 等价）。
+
+**步骤 2：通过 API 播种 tickets**
+
+先登录获取 cookie，再创建工单：
+
+```bash
+# 登录（获取 session cookie）
+curl -c cookies.txt -X POST https://<你的域名>/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username": "submitter"}'
+
+# 创建工单（createdBy 由后端从 auth session 获取，无需前端传入）
+curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
+  -H 'Content-Type: application/json' \
+  -d '{"title": "Fix login page styling on mobile", "description": "The login form overflows on screens narrower than 375px"}'
+```
+
+底层走 Drizzle ORM → D1，不涉及原始 SQL（预置用户除外，因 D1 Console 不支持 ORM）。
 
 ---
 
@@ -241,13 +290,17 @@ curl -X POST https://<你的域名>/api/tickets \
 首次部署或重大变更后，按此清单检查：
 
 - [ ] `wrangler.jsonc` 中 `database_id` 是真实 UUID（不是 PLACEHOLDER）
-- [ ] `pnpm check` 全绿（build + 54 tests + lint）
+- [ ] `pnpm check` 全绿（build + tests + lint）
 - [ ] `git push` 已触发自动部署
-- [ ] D1 Console 中 `tickets` 表存在（如不存在，手动执行 CREATE TABLE SQL）
+- [ ] D1 Console 中 `tickets` 表和 `users` 表均存在（如不存在，手动执行 CREATE TABLE SQL）
+- [ ] D1 Console 中预置用户已插入（见 4.云端 步骤 1）
 - [ ] `GET https://<域名>/health` 返回 `{"status":"ok"}`
-- [ ] `GET https://<域名>/api/tickets` 返回 JSON 数组（空或有数据）
-- [ ] 前端页面加载正常（SPA fallback 生效）
-- [ ] 切换角色页面（Submitter / Developer / Manager）不报错
+- [ ] `GET https://<域名>/api/auth/users` 返回 3 个预置用户
+- [ ] `POST https://<域名>/api/auth/login` 登录成功并设置 cookie
+- [ ] `GET https://<域名>/api/tickets`（带 cookie）返回 JSON 数组
+- [ ] 前端页面加载正常：访问 `/login` 显示用户选择卡片
+- [ ] 点击用户卡片 → 跳转到对应角色工作台
+- [ ] 退出按钮 → 返回 `/login`
 - [ ] 演示数据已播种（如需要）
 
 ---
@@ -292,6 +345,24 @@ curl -X POST https://<你的域名>/api/tickets \
 
 **修复**：确认迁移 SQL 使用 `IF NOT EXISTS`。
 
+### API 返回 401 `未登录`
+
+**原因**：需要认证的端点（/api/tickets、/api/auth/me、/api/auth/logout）未携带 session cookie。
+
+**修复**：先通过 `POST /api/auth/login` 获取 cookie，后续请求携带该 cookie。
+
+### `Failed query: select ... from "users"`
+
+**原因**：D1 数据库中没有 `users` 表（新增于 mvp-user-auth）。
+
+**修复**：Dashboard → D1 → Console → 执行 0001 和 0002 迁移 SQL（见 3.4）。
+
+### 迁移文件包含多条 SQL 语句导致 `migrate()` 报错
+
+**原因**：better-sqlite3 的 `prepare()` 只接受一条 SQL 语句。
+
+**修复**：每个迁移文件只放一条 SQL 语句（如 users 表和 username 索引分开放在 0001 和 0002）。
+
 ---
 
 ## 8. 关键文件索引
@@ -306,7 +377,12 @@ curl -X POST https://<你的域名>/api/tickets \
 | `apps/server/src/db/node.ts` | better-sqlite3 Drizzle 工厂函数 |
 | `apps/server/src/db/schema.ts` | Drizzle schema 定义（唯一真相源） |
 | `apps/server/src/db/seed.ts` | 本地播种脚本（ORM API） |
-| `apps/server/drizzle/0000_*.sql` | 迁移 SQL（必须 IF NOT EXISTS） |
+| `apps/server/src/lib/sessions.ts` | Session 存储服务（内存 Map） |
+| `apps/server/src/middleware/auth.ts` | Auth 中间件（session 注入 + requireAuth） |
+| `apps/server/src/routes/auth.ts` | Auth API（login/logout/me/users） |
+| `apps/server/drizzle/0000_*.sql` | 迁移 SQL：tickets 表 |
+| `apps/server/drizzle/0001_*.sql` | 迁移 SQL：users 表 |
+| `apps/server/drizzle/0002_*.sql` | 迁移 SQL：users username 唯一索引 |
 | `apps/server/drizzle/meta/_journal.json` | Drizzle migrate() 追踪用 |
 
 ### 相关 Spec

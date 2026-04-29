@@ -4,16 +4,20 @@ import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
 import health from './routes/health'
 import ticketsRoute from './routes/tickets'
-import type { DbVariables } from './db/types'
+import authRoute from './routes/auth'
+import { sessionMiddleware } from './middleware/auth'
+import type { AuthVariables } from './db/types'
 
-export function createApp<E extends DbVariables>(dbMiddleware: MiddlewareHandler<E>) {
+export function createApp<E extends AuthVariables>(dbMiddleware: MiddlewareHandler<E>) {
   const app = new Hono<E>()
 
   app.use(logger())
-  app.use(cors())
+  app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
   app.use('*', dbMiddleware)
+  app.use('*', sessionMiddleware)
 
   app.route('/', health)
+  app.route('/api/auth', authRoute)
   app.route('/api/tickets', ticketsRoute)
 
   app.onError((err, c) => {

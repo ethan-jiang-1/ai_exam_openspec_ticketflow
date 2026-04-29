@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import { App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
-import { RoleProvider } from './context/RoleContext'
+import { AuthProvider } from './context/AuthContext'
 import './index.css'
 import App from './App.tsx'
 
@@ -13,9 +13,9 @@ createRoot(document.getElementById('root')!).render(
     <ConfigProvider locale={zhCN}>
       <AntdApp>
         <BrowserRouter>
-          <RoleProvider>
+          <AuthProvider>
             <App />
-          </RoleProvider>
+          </AuthProvider>
         </BrowserRouter>
       </AntdApp>
     </ConfigProvider>

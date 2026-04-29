@@ -9,24 +9,24 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function getTickets(): Promise<Ticket[]> {
-  const res = await fetch('/api/tickets')
+  const res = await fetch('/api/tickets', { credentials: 'include' })
   return handleResponse<Ticket[]>(res)
 }
 
 export async function getTicket(id: string): Promise<Ticket> {
-  const res = await fetch(`/api/tickets/${id}`)
+  const res = await fetch(`/api/tickets/${id}`, { credentials: 'include' })
   return handleResponse<Ticket>(res)
 }
 
 export async function createTicket(data: {
   title: string
   description: string
-  createdBy: string
 }): Promise<Ticket> {
   const res = await fetch('/api/tickets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include',
   })
   return handleResponse<Ticket>(res)
 }
@@ -39,6 +39,7 @@ export async function assignTicket(
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ assignedTo }),
+    credentials: 'include',
   })
   return handleResponse<Ticket>(res)
 }
@@ -46,6 +47,7 @@ export async function assignTicket(
 export async function startTicket(id: string): Promise<Ticket> {
   const res = await fetch(`/api/tickets/${id}/start`, {
     method: 'PATCH',
+    credentials: 'include',
   })
   return handleResponse<Ticket>(res)
 }
@@ -53,6 +55,12 @@ export async function startTicket(id: string): Promise<Ticket> {
 export async function completeTicket(id: string): Promise<Ticket> {
   const res = await fetch(`/api/tickets/${id}/complete`, {
     method: 'PATCH',
+    credentials: 'include',
   })
   return handleResponse<Ticket>(res)
+}
+
+export async function getUsers(): Promise<{ username: string; displayName: string; role: string }[]> {
+  const res = await fetch('/api/auth/users', { credentials: 'include' })
+  return handleResponse<{ username: string; displayName: string; role: string }[]>(res)
 }

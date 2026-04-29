@@ -11,4 +11,12 @@ export const tickets = sqliteTable('tickets', {
   updatedAt: text('updated_at').notNull(),
 })
 
-export const schema = { tickets }
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  role: text('role').notNull(),
+  createdAt: text('created_at').notNull(),
+})
+
+export const schema = { tickets, users }

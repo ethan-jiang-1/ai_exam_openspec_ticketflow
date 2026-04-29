@@ -3,10 +3,12 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import { App as AntdApp } from 'antd'
-import { RoleProvider } from '../context/RoleContext'
+import { AuthProvider } from '../context/AuthContext'
 import SubmitterWorkbench from '../pages/SubmitterWorkbench'
 import DispatcherWorkbench from '../pages/DispatcherWorkbench'
 import CompleterWorkbench from '../pages/CompleterWorkbench'
+
+const mockUser = { id: 'u1', username: 'submitter', displayName: '提交者', role: 'submitter' as const, createdAt: '2026-01-01T00:00:00Z' }
 
 const mockTickets = [
   { id: '1', title: 'Ticket A', description: '', status: 'submitted', createdBy: 'submitter', assignedTo: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
@@ -22,7 +24,7 @@ function renderPage(path: string, element: React.ReactElement) {
     <MemoryRouter initialEntries={[path]}>
       <ConfigProvider>
         <AntdApp>
-          <RoleProvider>{element}</RoleProvider>
+          <AuthProvider>{element}</AuthProvider>
         </AntdApp>
       </ConfigProvider>
     </MemoryRouter>,
@@ -32,10 +34,17 @@ function renderPage(path: string, element: React.ReactElement) {
 describe('Workbench filtering', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTickets),
-    } as Response)
+    // Mock /api/auth/me to return logged-in user
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockTickets),
+      } as Response)
+    })
   })
 
   it('SubmitterWorkbench only shows createdBy=submitter tickets', async () => {
@@ -50,6 +59,13 @@ describe('Workbench filtering', () => {
   })
 
   it('DispatcherWorkbench shows all non-completed tickets', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
     renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
     await waitFor(() => {
       expect(screen.getByText('Ticket A')).toBeInTheDocument()
@@ -62,6 +78,13 @@ describe('Workbench filtering', () => {
   })
 
   it('CompleterWorkbench only shows assignedTo=completer and status=assigned|in_progress', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'completer', role: 'completer' }) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
     renderPage('/workbench/completer', <CompleterWorkbench />)
     await waitFor(() => {
       expect(screen.getByText('Ticket B')).toBeInTheDocument()
@@ -74,10 +97,16 @@ describe('Workbench filtering', () => {
 describe('Workbench ticket detail', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTickets),
-    } as Response)
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockTickets),
+      } as Response)
+    })
   })
 
   it('SubmitterWorkbench shows ticket detail in Drawer on click', async () => {
