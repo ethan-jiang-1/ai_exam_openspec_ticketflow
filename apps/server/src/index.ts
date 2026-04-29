@@ -1,6 +1,16 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
-import app from './app'
+import { createApp } from './app'
+import { createDb } from './db/node'
+import type { NodeEnv } from './db/types'
+
+const dbPath = process.env.DATABASE_PATH || './data/ticketflow.db'
+const db = createDb(dbPath)
+
+const app = createApp<NodeEnv>(async (c, next) => {
+  c.set('db', db)
+  await next()
+})
 
 const port = Number(process.env.SERVER_PORT) || 3000
 const host = process.env.SERVER_HOST || 'localhost'

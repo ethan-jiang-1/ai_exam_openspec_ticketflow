@@ -1,19 +1,21 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
-import { db } from '../db'
 import { tickets } from '../db/schema'
 import type { TicketStatus } from '@ticketflow/shared'
+import type { DbVariables } from '../db/types'
 
-const ticketsRoute = new Hono()
+const ticketsRoute = new Hono<DbVariables>()
 
 // GET /api/tickets
 ticketsRoute.get('/', async (c) => {
+  const db = c.get('db')
   const result = await db.select().from(tickets)
   return c.json(result)
 })
 
 // GET /api/tickets/:id
 ticketsRoute.get('/:id', async (c) => {
+  const db = c.get('db')
   const id = c.req.param('id')
   const result = await db.select().from(tickets).where(eq(tickets.id, id))
   if (result.length === 0) {
@@ -24,6 +26,7 @@ ticketsRoute.get('/:id', async (c) => {
 
 // POST /api/tickets
 ticketsRoute.post('/', async (c) => {
+  const db = c.get('db')
   const body = await c.req.json<{ title?: string; description?: string; createdBy?: string }>()
 
   if (!body.title || body.title.trim() === '') {
@@ -51,6 +54,7 @@ ticketsRoute.post('/', async (c) => {
 
 // PATCH /api/tickets/:id/assign
 ticketsRoute.patch('/:id/assign', async (c) => {
+  const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
 
@@ -76,6 +80,7 @@ ticketsRoute.patch('/:id/assign', async (c) => {
 
 // PATCH /api/tickets/:id/start
 ticketsRoute.patch('/:id/start', async (c) => {
+  const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
 
@@ -96,6 +101,7 @@ ticketsRoute.patch('/:id/start', async (c) => {
 
 // PATCH /api/tickets/:id/complete
 ticketsRoute.patch('/:id/complete', async (c) => {
+  const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
 

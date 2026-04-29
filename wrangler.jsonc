@@ -1,10 +1,19 @@
 {
-  // Workers assets-only 部署配置
-  // 使 npx wrangler deploy 在 monorepo 根目录成功执行
+  // Workers + 静态资产 + D1 一体化部署配置
   "name": "ticketflow",
   "compatibility_date": "2026-04-29",
+  "main": "./apps/server/src/worker.ts",
   "assets": {
     "directory": "./apps/web/dist",
-    "not_found_handling": "single-page-application"
-  }
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/health"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ticketflow-db",
+      "database_id": "PLACEHOLDER",
+      "migrations_dir": "apps/server/drizzle"
+    }
+  ]
 }

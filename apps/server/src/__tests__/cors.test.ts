@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import app from '../app'
+import { createTestApp } from './helpers'
+
+const { app } = createTestApp()
 
 describe('CORS middleware', () => {
   it('should include Access-Control-Allow-Origin header', async () => {

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import app from '../app'
-import { db } from '../db'
+import { createTestApp } from './helpers'
 import { tickets } from '../db/schema'
+
+const { app, db } = createTestApp()
 
 describe('Integration: full ticket lifecycle', () => {
   beforeEach(async () => {

@@ -94,6 +94,7 @@ rules:
     - design 中的每个决策必须在 spec 中有对应 Requirement
     - 涉及数据库的 change 必须明确测试数据库策略（隔离方式、清空方式）
     - DB 相关字段名必须明确标注 DB 列名 ↔ JS 属性名映射关系
+    - 数据库播种/初始化必须通过 ORM API 完成，不允许 SQL 文件。如果部署目标不支持直接 ORM 播种，必须通过 API 端点间接完成（与"禁止原始 SQL"约定一致，无例外）
   specs:
     - 所有 Requirement 必须带 {CAP}-{SEQ} 编码
     - 每个 Requirement 至少有一个 Scenario
