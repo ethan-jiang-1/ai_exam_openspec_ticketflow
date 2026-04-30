@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import SubmitterWorkbench from './pages/SubmitterWorkbench'
 import DispatcherWorkbench from './pages/DispatcherWorkbench'
 import CompleterWorkbench from './pages/CompleterWorkbench'
+import AdminWorkbench from './pages/AdminWorkbench'
 
 function ProtectedLayout() {
   const { user, loading } = useAuth()
@@ -44,6 +45,7 @@ function App() {
         <Route path="submitter" element={<WorkbenchGuard role="submitter"><SubmitterWorkbench /></WorkbenchGuard>} />
         <Route path="dispatcher" element={<WorkbenchGuard role="dispatcher"><DispatcherWorkbench /></WorkbenchGuard>} />
         <Route path="completer" element={<WorkbenchGuard role="completer"><CompleterWorkbench /></WorkbenchGuard>} />
+        <Route path="admin" element={<WorkbenchGuard role="admin"><AdminWorkbench /></WorkbenchGuard>} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

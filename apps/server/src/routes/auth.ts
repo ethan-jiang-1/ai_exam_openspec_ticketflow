@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { users } from '../db/schema'
 import { sessionStore } from '../lib/sessions'
+import { verifyPassword } from '../lib/password'
 import { requireAuth } from '../middleware/auth'
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie'
 import type { AuthVariables } from '../db/types'
@@ -21,10 +22,13 @@ authRoute.get('/users', async (c) => {
 
 // POST /api/auth/login
 authRoute.post('/login', async (c) => {
-  const body = await c.req.json<{ username?: string }>()
+  const body = await c.req.json<{ username?: string; password?: string }>()
 
   if (!body.username) {
     return c.json({ error: 'username is required' }, 400)
+  }
+  if (!body.password) {
+    return c.json({ error: 'password is required' }, 400)
   }
 
   const db = c.get('db')
@@ -35,6 +39,11 @@ authRoute.post('/login', async (c) => {
   }
 
   const user = result[0]
+  const valid = await verifyPassword(body.password, user.passwordHash)
+  if (!valid) {
+    return c.json({ error: '密码错误' }, 401)
+  }
+
   const sessionId = sessionStore.create(user.id)
 
   setCookie(c, 'ticketflow-session', sessionId, {

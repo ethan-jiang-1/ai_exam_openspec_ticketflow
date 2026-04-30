@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { createDb } from './node'
 import { tickets, users } from './schema'
+import { hashPassword } from '../lib/password'
 
 const db = createDb(process.env.DATABASE_PATH || './data/ticketflow.db')
 
@@ -8,19 +9,28 @@ const now = new Date().toISOString()
 
 // --- Seed users ---
 
-const seedUsers = [
-  { id: 'u-00000000-0000-0000-0000-000000000001', username: 'submitter', displayName: '提交者', role: 'submitter', createdAt: now },
-  { id: 'u-00000000-0000-0000-0000-000000000002', username: 'dispatcher', displayName: '调度者', role: 'dispatcher', createdAt: now },
-  { id: 'u-00000000-0000-0000-0000-000000000003', username: 'completer', displayName: '完成者', role: 'completer', createdAt: now },
+const seedUserDefs = [
+  { id: 'u-00000000-0000-0000-0000-000000000001', username: 'submitter', displayName: '提交者', role: 'submitter', password: 'changeme' },
+  { id: 'u-00000000-0000-0000-0000-000000000002', username: 'dispatcher', displayName: '调度者', role: 'dispatcher', password: 'changeme' },
+  { id: 'u-00000000-0000-0000-0000-000000000003', username: 'completer', displayName: '完成者', role: 'completer', password: 'changeme' },
+  { id: 'u-00000000-0000-0000-0000-000000000004', username: 'admin', displayName: '管理员', role: 'admin', password: 'admin' },
 ]
 
-for (const u of seedUsers) {
-  const existing = await db.select().from(users).where(eq(users.username, u.username))
+for (const def of seedUserDefs) {
+  const existing = await db.select().from(users).where(eq(users.username, def.username))
   if (existing.length === 0) {
-    await db.insert(users).values(u)
+    const passwordHash = await hashPassword(def.password)
+    await db.insert(users).values({
+      id: def.id,
+      username: def.username,
+      displayName: def.displayName,
+      role: def.role,
+      passwordHash,
+      createdAt: now,
+    })
   }
 }
-console.log(`Seeded ${seedUsers.length} users`)
+console.log(`Seeded ${seedUserDefs.length} users`)
 
 // --- Seed tickets ---
 
@@ -87,5 +97,12 @@ const seedTickets = [
   },
 ]
 
-await db.insert(tickets).values(seedTickets)
-console.log(`Seeded ${seedTickets.length} tickets`)
+let ticketCount = 0
+for (const ticket of seedTickets) {
+  const existing = await db.select().from(tickets).where(eq(tickets.id, ticket.id))
+  if (existing.length === 0) {
+    await db.insert(tickets).values(ticket)
+    ticketCount++
+  }
+}
+console.log(`Seeded ${ticketCount} tickets`)

@@ -13,10 +13,11 @@ import {
 } from '../index'
 
 describe('ROLES', () => {
-  it('should contain three roles with key=value consistency', () => {
+  it('should contain four roles with key=value consistency', () => {
     expect(ROLES.submitter).toBe('submitter')
     expect(ROLES.dispatcher).toBe('dispatcher')
     expect(ROLES.completer).toBe('completer')
+    expect(ROLES.admin).toBe('admin')
   })
 
   it('should have keys matching values', () => {
@@ -27,12 +28,12 @@ describe('ROLES', () => {
 })
 
 describe('ROLE_LIST', () => {
-  it('should have length 3', () => {
-    expect(ROLE_LIST).toHaveLength(3)
+  it('should have length 4', () => {
+    expect(ROLE_LIST).toHaveLength(4)
   })
 
   it('should contain all role values', () => {
-    const values: readonly Role[] = ['submitter', 'dispatcher', 'completer']
+    const values: readonly Role[] = ['submitter', 'dispatcher', 'completer', 'admin']
     expect(ROLE_LIST).toEqual(values)
   })
 })

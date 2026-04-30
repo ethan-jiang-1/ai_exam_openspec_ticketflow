@@ -2,20 +2,26 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createTestApp } from './helpers'
 import { tickets, users } from '../db/schema'
 import { sessionStore } from '../lib/sessions'
+import { hashPassword } from '../lib/password'
 
 const { app, db } = createTestApp()
 
-const testUsers = [
-  { id: 'u-test-00000000-0000-0000-000000000001', username: 'submitter', displayName: 'Test Submitter', role: 'submitter' as const, createdAt: new Date().toISOString() },
-  { id: 'u-test-00000000-0000-0000-000000000002', username: 'dispatcher', displayName: 'Test Dispatcher', role: 'dispatcher' as const, createdAt: new Date().toISOString() },
-  { id: 'u-test-00000000-0000-0000-000000000003', username: 'completer', displayName: 'Test Completer', role: 'completer' as const, createdAt: new Date().toISOString() },
-]
+async function seedUser(id: string, username: string, displayName: string, role: string, password: string) {
+  await db.insert(users).values({
+    id,
+    username,
+    displayName,
+    role,
+    passwordHash: await hashPassword(password),
+    createdAt: new Date().toISOString(),
+  })
+}
 
 async function loginAs(username: string): Promise<string> {
   const res = await app.request('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ username, password: 'testpass' }),
   })
   return res.headers.get('set-cookie')!
 }
@@ -29,7 +35,9 @@ describe('Tickets API', () => {
     sessionStore.clear()
     await db.delete(tickets)
     await db.delete(users)
-    await db.insert(users).values(testUsers)
+    await seedUser('u-test-00000000-0000-0000-000000000001', 'submitter', 'Test Submitter', 'submitter', 'testpass')
+    await seedUser('u-test-00000000-0000-0000-000000000002', 'dispatcher', 'Test Dispatcher', 'dispatcher', 'testpass')
+    await seedUser('u-test-00000000-0000-0000-000000000003', 'completer', 'Test Completer', 'completer', 'testpass')
     submitterCookie = await loginAs('submitter')
     dispatcherCookie = await loginAs('dispatcher')
     completerCookie = await loginAs('completer')

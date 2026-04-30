@@ -156,17 +156,25 @@ async function testLoginFail() {
   const r1 = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({}) })
   if (r1.status !== 400) throw new Error(`Missing username: expected 400, got ${r1.status}`)
 
+  // Missing password
+  const r2 = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'submitter' }) })
+  if (r2.status !== 400) throw new Error(`Missing password: expected 400, got ${r2.status}`)
+
   // Non-existent user
-  const r2 = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'nobody' }) })
-  if (r2.status !== 401) throw new Error(`Non-existent user: expected 401, got ${r2.status}`)
+  const r3 = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'nobody', password: 'x' }) })
+  if (r3.status !== 401) throw new Error(`Non-existent user: expected 401, got ${r3.status}`)
+
+  // Wrong password
+  const r4 = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'submitter', password: 'wrong' }) })
+  if (r4.status !== 401) throw new Error(`Wrong password: expected 401, got ${r4.status}`)
 
   logPass('login failure cases')
 }
 
-async function testLogin(username) {
+async function testLogin(username, password) {
   const { status, body, headers } = await request('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ username, password }),
   })
   if (status !== 200) throw new Error(`Expected 200, got ${status}: ${JSON.stringify(body)}`)
   if (body.username !== username) throw new Error(`Expected username="${username}", got "${body.username}"`)
@@ -274,7 +282,7 @@ async function testSessionPersists() {
   // Login → me → me again — cookie should keep working
   const { headers } = await request('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username: 'dispatcher' }),
+    body: JSON.stringify({ username: 'dispatcher', password: 'changeme' }),
   })
   const cookie = extractCookie(headers.get('set-cookie'))
 
@@ -284,6 +292,76 @@ async function testSessionPersists() {
   if (r1.body.username !== r2.body.username) throw new Error('Session user changed between requests')
 
   logPass('session persists across requests')
+}
+
+async function testAdminListUsers(cookie) {
+  const { status, body } = await request('/api/admin/users', {
+    headers: { Cookie: cookie },
+  })
+  if (status !== 200) throw new Error(`Expected 200, got ${status}`)
+  if (body.length < 4) throw new Error(`Expected 4+ users, got ${body.length}`)
+  if (!body.every(u => !('passwordHash' in u))) throw new Error('passwordHash leaked in response')
+  logPass('admin list users')
+}
+
+async function testAdminCreateUser(cookie) {
+  const username = `e2e-${randomUUID().slice(0, 8)}`
+  const { status, body } = await request('/api/admin/users', {
+    method: 'POST',
+    body: JSON.stringify({ username, displayName: 'E2E User', role: 'submitter', password: 'e2epass' }),
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+  })
+  if (status !== 201) throw new Error(`Expected 201, got ${status}: ${JSON.stringify(body)}`)
+  if (body.username !== username) throw new Error(`Expected username="${username}", got "${body.username}"`)
+  if ('passwordHash' in body) throw new Error('passwordHash leaked in create response')
+  logPass('admin create user')
+  return { username, password: 'e2epass' }
+}
+
+async function testAdminUpdateUser(cookie, username) {
+  const { status, body } = await request(`/api/admin/users/${username}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName: 'E2E Updated', password: 'newpass' }),
+    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+  })
+  if (status !== 200) throw new Error(`Expected 200, got ${status}: ${JSON.stringify(body)}`)
+  if (body.displayName !== 'E2E Updated') throw new Error(`Expected displayName="E2E Updated", got "${body.displayName}"`)
+  logPass('admin update user')
+
+  // Verify new password works
+  const loginRes = await request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password: 'newpass' }),
+  })
+  if (loginRes.status !== 200) throw new Error(`Login with new password failed: ${loginRes.status}`)
+  logPass('updated user login with new password')
+}
+
+async function testAdminCannotDeleteAdmin(cookie) {
+  const { status } = await request('/api/admin/users/admin', {
+    method: 'DELETE',
+    headers: { Cookie: cookie },
+  })
+  if (status !== 400) throw new Error(`Expected 400, got ${status}`)
+  logPass('admin cannot delete self')
+}
+
+async function testAdminDeleteUser(cookie, username) {
+  const { status, body } = await request(`/api/admin/users/${username}`, {
+    method: 'DELETE',
+    headers: { Cookie: cookie },
+  })
+  if (status !== 200) throw new Error(`Expected 200, got ${status}`)
+  if (!body.ok) throw new Error('Expected body.ok = true')
+  logPass('admin delete user')
+}
+
+async function testNonAdminCannotAccessAdminAPI(cookie) {
+  const { status } = await request('/api/admin/users', {
+    headers: { Cookie: cookie },
+  })
+  if (status !== 403) throw new Error(`Expected 403, got ${status}`)
+  logPass('non-admin 403 on /api/admin/users')
 }
 
 // ── Main ─────────────────────────────────────────────────────────────
@@ -308,17 +386,24 @@ async function main() {
       ['Auth: get users', () => testGetUsers()],
       ['Auth: login failure', () => testLoginFail()],
       ['Auth: me (unauth)', () => testMeUnauth()],
-      ['Auth: login as submitter', async () => { globalThis.__submitterCookie = await testLogin('submitter') }],
+      ['Auth: login as submitter', async () => { globalThis.__submitterCookie = await testLogin('submitter', 'changeme') }],
       ['Auth: me (auth)', () => testMe(globalThis.__submitterCookie)],
       ['Tickets: auth guard', () => testTicketAuthGuard()],
       ['Tickets: create', async () => { globalThis.__ticket = await testCreateTicket(globalThis.__submitterCookie) }],
-      ['Auth: login as dispatcher', async () => { globalThis.__dispatcherCookie = await testLogin('dispatcher') }],
+      ['Auth: login as dispatcher', async () => { globalThis.__dispatcherCookie = await testLogin('dispatcher', 'changeme') }],
       ['Tickets: assign', () => testAssignTicket(globalThis.__dispatcherCookie, globalThis.__ticket.id)],
-      ['Auth: login as completer', async () => { globalThis.__completerCookie = await testLogin('completer') }],
+      ['Auth: login as completer', async () => { globalThis.__completerCookie = await testLogin('completer', 'changeme') }],
       ['Tickets: start', () => testStartTicket(globalThis.__completerCookie, globalThis.__ticket.id)],
       ['Tickets: complete', () => testCompleteTicket(globalThis.__completerCookie, globalThis.__ticket.id)],
       ['Auth: session persistence', () => testSessionPersists()],
+      ['Admin: non-admin 403', () => testNonAdminCannotAccessAdminAPI(globalThis.__submitterCookie)],
       ['Auth: logout', () => testLogout(globalThis.__submitterCookie)],
+      ['Admin: login as admin', async () => { globalThis.__adminCookie = await testLogin('admin', 'admin') }],
+      ['Admin: list users', () => testAdminListUsers(globalThis.__adminCookie)],
+      ['Admin: create user', async () => { globalThis.__createdUser = await testAdminCreateUser(globalThis.__adminCookie) }],
+      ['Admin: update user', () => testAdminUpdateUser(globalThis.__adminCookie, globalThis.__createdUser.username)],
+      ['Admin: cannot delete self', () => testAdminCannotDeleteAdmin(globalThis.__adminCookie)],
+      ['Admin: delete user', () => testAdminDeleteUser(globalThis.__adminCookie, globalThis.__createdUser.username)],
     ]
 
     for (const [name, fn] of steps) {

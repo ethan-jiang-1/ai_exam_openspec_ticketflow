@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import health from './routes/health'
 import ticketsRoute from './routes/tickets'
 import authRoute from './routes/auth'
+import adminRoute from './routes/admin'
 import { sessionMiddleware } from './middleware/auth'
 import type { AuthVariables } from './db/types'
 
@@ -19,6 +20,7 @@ export function createApp<E extends AuthVariables>(dbMiddleware: MiddlewareHandl
   app.route('/', health)
   app.route('/api/auth', authRoute)
   app.route('/api/tickets', ticketsRoute)
+  app.route('/api/admin', adminRoute)
 
   app.onError((err, c) => {
     console.error('Unhandled error:', err)

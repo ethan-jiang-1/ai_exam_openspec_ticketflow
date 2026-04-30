@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
@@ -7,6 +7,7 @@ import { AuthProvider } from '../context/AuthContext'
 import SubmitterWorkbench from '../pages/SubmitterWorkbench'
 import DispatcherWorkbench from '../pages/DispatcherWorkbench'
 import CompleterWorkbench from '../pages/CompleterWorkbench'
+import AdminWorkbench from '../pages/AdminWorkbench'
 
 const mockUser = { id: 'u1', username: 'submitter', displayName: '提交者', role: 'submitter' as const, createdAt: '2026-01-01T00:00:00Z' }
 
@@ -37,6 +38,198 @@ function renderPage(path: string, element: React.ReactElement) {
   )
 }
 
+describe('AdminWorkbench', () => {
+  const mockAdminUser = { id: 'u-admin', username: 'admin', displayName: '管理员', role: 'admin' as const, createdAt: '2026-01-01T00:00:00Z' }
+
+  const mockUserList = [
+    { id: 'u1', username: 'alice', displayName: 'Alice', role: 'submitter', createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'u2', username: 'bob', displayName: 'Bob', role: 'dispatcher', createdAt: '2026-01-02T00:00:00Z' },
+  ]
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAdminUser) } as Response)
+      }
+      if (urlStr === '/api/admin/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUserList) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('renders user list in table', async () => {
+    renderPage('/workbench/admin', <AdminWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+    expect(screen.getByText('bob')).toBeInTheDocument()
+    expect(screen.getByText('用户管理')).toBeInTheDocument()
+  })
+
+  it('opens create modal on "新增用户" button click', async () => {
+    renderPage('/workbench/admin', <AdminWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('新增用户'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /创/ })).toBeInTheDocument()
+    })
+  })
+
+  it('shows Popconfirm on delete click', async () => {
+    renderPage('/workbench/admin', <AdminWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByText('删除')
+    fireEvent.click(deleteButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('确定删除此用户？')).toBeInTheDocument()
+    })
+  })
+
+  it('creates user via modal form and calls POST API', async () => {
+    let postBody: string | null = null
+    vi.unstubAllGlobals()
+    const fetchMock = vi.fn((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAdminUser) } as Response)
+      }
+      if (urlStr === '/api/admin/users' && init?.method === 'POST') {
+        postBody = init.body as string
+        return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ id: 'u-new', username: 'charlie', displayName: 'Charlie', role: 'completer', createdAt: '2026-01-01T00:00:00Z' }) } as Response)
+      }
+      if (urlStr === '/api/admin/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUserList) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPage('/workbench/admin', <AdminWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('新增用户'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /创/ })).toBeInTheDocument()
+    })
+
+    // Fill form
+    fireEvent.change(screen.getByPlaceholderText('用户名（不可修改）'), { target: { value: 'charlie' } })
+    fireEvent.change(screen.getByPlaceholderText('显示名'), { target: { value: 'Charlie' } })
+    fireEvent.change(screen.getByPlaceholderText('输入密码'), { target: { value: 'pass123' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /创/ }))
+
+    await waitFor(() => {
+      expect(postBody).not.toBeNull()
+    })
+
+    const body = JSON.parse(postBody!)
+    expect(body.username).toBe('charlie')
+    expect(body.displayName).toBe('Charlie')
+    expect(body.role).toBe('submitter')
+    expect(body.password).toBe('pass123')
+  })
+
+  it('edits user via modal form and calls PATCH API', async () => {
+    let patchBody: string | null = null
+    vi.unstubAllGlobals()
+    const fetchMock = vi.fn((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAdminUser) } as Response)
+      }
+      if (urlStr === '/api/admin/users/alice' && init?.method === 'PATCH') {
+        patchBody = init.body as string
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 'u1', username: 'alice', displayName: 'Updated Alice', role: 'dispatcher', createdAt: '2026-01-01T00:00:00Z' }) } as Response)
+      }
+      if (urlStr === '/api/admin/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUserList) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPage('/workbench/admin', <AdminWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getAllByText('编辑')[0])
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /保/ })).toBeInTheDocument()
+    })
+
+    // Clear displayName and type new
+    const displayNameInput = screen.getByPlaceholderText('显示名')
+    fireEvent.change(displayNameInput, { target: { value: 'Updated Alice' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /保/ }))
+
+    await waitFor(() => {
+      expect(patchBody).not.toBeNull()
+    })
+
+    const body = JSON.parse(patchBody!)
+    expect(body.displayName).toBe('Updated Alice')
+  })
+
+  it('deletes user via Popconfirm confirm and calls DELETE API', async () => {
+    let deleteCalled = false
+    vi.unstubAllGlobals()
+    const fetchMock = vi.fn((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockAdminUser) } as Response)
+      }
+      if (urlStr === '/api/admin/users/alice' && init?.method === 'DELETE') {
+        deleteCalled = true
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) } as Response)
+      }
+      if (urlStr === '/api/admin/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUserList) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPage('/workbench/admin', <AdminWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByText('删除')
+    fireEvent.click(deleteButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('确定删除此用户？')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /确/ }))
+
+    await waitFor(() => {
+      expect(deleteCalled).toBe(true)
+    })
+  })
+})
+
 describe('Workbench filtering', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -64,6 +257,7 @@ describe('Workbench filtering', () => {
   })
 
   it('DispatcherWorkbench shows all non-completed tickets', async () => {
+    vi.restoreAllMocks()
     vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
       if (urlStr === '/api/auth/me') {
@@ -86,6 +280,7 @@ describe('Workbench filtering', () => {
   })
 
   it('CompleterWorkbench only shows assignedTo=completer and status=assigned|in_progress', async () => {
+    vi.restoreAllMocks()
     vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
       if (urlStr === '/api/auth/me') {

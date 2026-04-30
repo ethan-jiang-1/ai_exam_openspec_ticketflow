@@ -66,3 +66,46 @@ export async function getUsers() {
   const res = await fetch('/api/auth/users', { credentials: 'include' })
   return handleResponse<User[]>(res)
 }
+
+// --- Admin API ---
+
+export async function getAdminUsers(): Promise<User[]> {
+  const res = await fetch('/api/admin/users', { credentials: 'include' })
+  return handleResponse<User[]>(res)
+}
+
+export async function createUser(data: {
+  username: string
+  displayName: string
+  role: string
+  password: string
+}): Promise<User> {
+  const res = await fetch('/api/admin/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  })
+  return handleResponse<User>(res)
+}
+
+export async function updateUser(
+  username: string,
+  data: { displayName?: string; role?: string; password?: string },
+): Promise<User> {
+  const res = await fetch(`/api/admin/users/${username}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  })
+  return handleResponse<User>(res)
+}
+
+export async function deleteUser(username: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/admin/users/${username}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  return handleResponse<{ ok: boolean }>(res)
+}

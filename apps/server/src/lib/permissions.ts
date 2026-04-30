@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   TICKET_START: 'ticket:start',
   TICKET_COMPLETE: 'ticket:complete',
   TICKET_READ: 'ticket:read',
+  USER_MANAGE: 'user:manage',
 } as const
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
@@ -16,6 +17,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   submitter: ['ticket:create', 'ticket:read'],
   dispatcher: ['ticket:assign', 'ticket:read'],
   completer: ['ticket:start', 'ticket:complete', 'ticket:read'],
+  admin: ['ticket:create', 'ticket:assign', 'ticket:start', 'ticket:complete', 'ticket:read', 'user:manage'],
 }
 
 export function getPermissionsForRoles(roles: Role[]): Set<Permission> {

@@ -12,14 +12,15 @@ import {
 } from '../lib/permissions'
 
 describe('PERMISSIONS constant', () => {
-  it('contains exactly 5 permission strings', () => {
+  it('contains exactly 6 permission strings', () => {
     const values = Object.values(PERMISSIONS)
-    expect(values).toHaveLength(5)
+    expect(values).toHaveLength(6)
     expect(values).toContain('ticket:create')
     expect(values).toContain('ticket:assign')
     expect(values).toContain('ticket:start')
     expect(values).toContain('ticket:complete')
     expect(values).toContain('ticket:read')
+    expect(values).toContain('user:manage')
   })
 })
 
@@ -37,10 +38,26 @@ describe('ROLE_PERMISSIONS mapping', () => {
   })
 
   it('every role has ticket:read', () => {
-    const roles: Role[] = ['submitter', 'dispatcher', 'completer']
+    const roles: Role[] = ['submitter', 'dispatcher', 'completer', 'admin']
     for (const role of roles) {
       expect(ROLE_PERMISSIONS[role]).toContain('ticket:read')
     }
+  })
+
+  it('admin has all 6 permissions including user:manage', () => {
+    expect(ROLE_PERMISSIONS['admin']).toHaveLength(6)
+    expect(ROLE_PERMISSIONS['admin']).toContain('ticket:create')
+    expect(ROLE_PERMISSIONS['admin']).toContain('ticket:assign')
+    expect(ROLE_PERMISSIONS['admin']).toContain('ticket:start')
+    expect(ROLE_PERMISSIONS['admin']).toContain('ticket:complete')
+    expect(ROLE_PERMISSIONS['admin']).toContain('ticket:read')
+    expect(ROLE_PERMISSIONS['admin']).toContain('user:manage')
+  })
+
+  it('non-admin roles do not have user:manage', () => {
+    expect(ROLE_PERMISSIONS['submitter']).not.toContain('user:manage')
+    expect(ROLE_PERMISSIONS['dispatcher']).not.toContain('user:manage')
+    expect(ROLE_PERMISSIONS['completer']).not.toContain('user:manage')
   })
 })
 

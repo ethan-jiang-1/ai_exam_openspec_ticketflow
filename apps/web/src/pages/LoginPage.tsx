@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Row, Col, Card, Spin, App as AntdApp } from 'antd'
+import { Row, Col, Card, Input, Button, Spin, App as AntdApp } from 'antd'
 import { useAuth } from '../context/AuthContext'
 import { getUsers } from '../api/client'
 
@@ -9,7 +9,8 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { message } = AntdApp.useApp()
   const [users, setUsers] = useState<{ username: string; displayName: string; role: string }[]>([])
-  const [loginLoading, setLoginLoading] = useState(false)
+  const [passwords, setPasswords] = useState<Record<string, string>>({})
+  const [loginLoading, setLoginLoading] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && user) {
@@ -26,12 +27,12 @@ export default function LoginPage() {
 
   const handleLogin = async (username: string) => {
     try {
-      setLoginLoading(true)
-      await login(username)
+      setLoginLoading(username)
+      await login(username, passwords[username] || '')
     } catch (e) {
       message.error(e instanceof Error ? e.message : '登录失败')
     } finally {
-      setLoginLoading(false)
+      setLoginLoading(null)
     }
   }
 
@@ -49,13 +50,24 @@ export default function LoginPage() {
       <Row gutter={[16, 16]} justify="center">
         {users.map((u) => (
           <Col key={u.username} xs={24} sm={8}>
-            <Card
-              hoverable
-              style={{ textAlign: 'center' }}
-              onClick={() => handleLogin(u.username)}
-              loading={loginLoading}
-            >
+            <Card style={{ textAlign: 'center' }}>
               <Card.Meta title={u.displayName} description={u.role} />
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Input.Password
+                  placeholder="输入密码"
+                  value={passwords[u.username] || ''}
+                  onChange={(e) => setPasswords((prev) => ({ ...prev, [u.username]: e.target.value }))}
+                  onPressEnter={() => handleLogin(u.username)}
+                />
+                <Button
+                  type="primary"
+                  loading={loginLoading === u.username}
+                  onClick={() => handleLogin(u.username)}
+                  block
+                >
+                  登录
+                </Button>
+              </div>
             </Card>
           </Col>
         ))}

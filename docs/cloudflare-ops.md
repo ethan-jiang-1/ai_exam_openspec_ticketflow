@@ -150,12 +150,14 @@ npx wrangler d1 migrations apply ticketflow-db --remote
 2 张业务表：
 
 ```sql
--- 0000: 初始 tickets 表
+-- 0000: tickets 表（初始）
 CREATE TABLE IF NOT EXISTS `tickets` (
   `id` text PRIMARY KEY NOT NULL,
   `title` text NOT NULL,
   `description` text NOT NULL,
   `status` text DEFAULT 'submitted' NOT NULL,
+  `priority` text DEFAULT 'medium' NOT NULL,
+  `due_date` text,
   `created_by` text NOT NULL,
   `assigned_to` text,
   `created_at` text NOT NULL,
@@ -164,18 +166,19 @@ CREATE TABLE IF NOT EXISTS `tickets` (
 ```
 
 ```sql
--- 0001: users 表（mvp-user-auth 新增）
+-- 0001: users 表
 CREATE TABLE IF NOT EXISTS `users` (
   `id` text PRIMARY KEY NOT NULL,
   `username` text NOT NULL,
   `display_name` text NOT NULL,
   `role` text NOT NULL,
+  `password_hash` text NOT NULL DEFAULT '',
   `created_at` text NOT NULL
 );
 ```
 
 ```sql
--- 0002: users 表 username 唯一索引
+-- 0002: users username 唯一索引
 CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);
 ```
 
@@ -209,6 +212,9 @@ D1 中的系统表（正常，勿删）：
 | `0000_rainy_doctor_doom.sql` | tickets 表（初始） | drizzle-kit generate |
 | `0001_create_users.sql` | users 表 | mvp-user-auth（手写） |
 | `0002_users_username_idx.sql` | users.username 唯一索引 | mvp-user-auth（手写） |
+| `0003_add_priority.sql` | tickets 表新增 priority 列 | mvp-ticket-enrichment |
+| `0004_add_due_date.sql` | tickets 表新增 due_date 列 | mvp-ticket-enrichment |
+| `0005_add_password_hash.sql` | users 表新增 password_hash 列 | mvp-user-management |
 
 **每次新增迁移文件后需要做的事：**
 1. 在 `meta/_journal.json` 的 `entries` 数组末尾追加一条 `{idx, version, when, tag, breakpoints}` 记录
@@ -238,13 +244,14 @@ D1 无法直接跑 seed.ts（Workers 无文件系统）。分两步：
 Dashboard → D1 → ticketflow-db → Console，执行：
 
 ```sql
-INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `created_at`) VALUES
-  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', '2026-01-01T00:00:00Z');
+INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `password_hash`, `created_at`) VALUES
+  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '38e1ecb1f9e092b3:9f33df3e56dee5a336712b3cf5ed9c248b5a0ce7ec4f1b54e9c35e6ee1dd6c03', '2026-01-01T00:00:00Z');
 ```
 
-> 注意：此处使用 `INSERT OR IGNORE` 确保 D1 Console 可重复执行（与 ORM 的 existence check 等价）。
+> 密码：submitter/dispatcher/completer 的密码为 `changeme`，admin 的密码为 `admin`。上表中的 `password_hash` 是 `salt:hash` 格式的 PBKDF2-SHA256 值（100k 次迭代）。
 
 **步骤 2：通过 API 播种 tickets**
 
@@ -254,9 +261,9 @@ INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `create
 # 登录（获取 session cookie）
 curl -c cookies.txt -X POST https://<你的域名>/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"username": "submitter"}'
+  -d '{"username": "submitter", "password": "changeme"}'
 
-# 创建工单（createdBy 由后端从 auth session 获取，无需前端传入）
+# 创建工单
 curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
   -H 'Content-Type: application/json' \
   -d '{"title": "Fix login page styling on mobile", "description": "The login form overflows on screens narrower than 375px"}'
@@ -292,14 +299,15 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 - [ ] `wrangler.jsonc` 中 `database_id` 是真实 UUID（不是 PLACEHOLDER）
 - [ ] `pnpm check` 全绿（build + tests + lint）
 - [ ] `git push` 已触发自动部署
-- [ ] D1 Console 中 `tickets` 表和 `users` 表均存在（如不存在，手动执行 CREATE TABLE SQL）
-- [ ] D1 Console 中预置用户已插入（见 4.云端 步骤 1）
+- [ ] D1 Console 中 `tickets` 表和 `users` 表均存在（含 `password_hash`、`priority`、`due_date` 列）
+- [ ] D1 Console 中 4 个预置用户已插入（含 password_hash，见 4.云端 步骤 1）
 - [ ] `GET https://<域名>/health` 返回 `{"status":"ok"}`
-- [ ] `GET https://<域名>/api/auth/users` 返回 3 个预置用户
-- [ ] `POST https://<域名>/api/auth/login` 登录成功并设置 cookie
+- [ ] `GET https://<域名>/api/auth/users` 返回 4 个预置用户
+- [ ] `POST https://<域名>/api/auth/login` 使用 `{username, password}` 登录成功并设置 cookie
 - [ ] `GET https://<域名>/api/tickets`（带 cookie）返回 JSON 数组
-- [ ] 前端页面加载正常：访问 `/login` 显示用户选择卡片
-- [ ] 点击用户卡片 → 跳转到对应角色工作台
+- [ ] 前端页面加载正常：访问 `/login` 显示密码输入框 + 登录按钮
+- [ ] 输入正确密码 → 登录成功 → 跳转到对应角色工作台
+- [ ] admin 登录 → 可访问 `/workbench/admin` → 查看/新增/编辑/删除用户
 - [ ] 退出按钮 → 返回 `/login`
 - [ ] 演示数据已播种（如需要）
 
@@ -376,14 +384,21 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 | `apps/server/src/db/d1.ts` | D1 Drizzle 工厂函数 |
 | `apps/server/src/db/node.ts` | better-sqlite3 Drizzle 工厂函数 |
 | `apps/server/src/db/schema.ts` | Drizzle schema 定义（唯一真相源） |
-| `apps/server/src/db/seed.ts` | 本地播种脚本（ORM API） |
+| `apps/server/src/db/seed.ts` | 本地播种脚本（ORM API，幂等） |
 | `apps/server/src/lib/sessions.ts` | Session 存储服务（内存 Map） |
-| `apps/server/src/middleware/auth.ts` | Auth 中间件（session 注入 + requireAuth） |
-| `apps/server/src/routes/auth.ts` | Auth API（login/logout/me/users） |
+| `apps/server/src/lib/password.ts` | PBKDF2-SHA256 密码 hash/verify |
+| `apps/server/src/lib/permissions.ts` | RBAC 权限映射 |
+| `apps/server/src/middleware/auth.ts` | Auth 中间件（session 注入 + requireAuth，排除 passwordHash） |
+| `apps/server/src/routes/auth.ts` | Auth API（login/logout/me/users，密码登录） |
+| `apps/server/src/routes/admin.ts` | Admin API（用户 CRUD，需 user:manage 权限） |
 | `apps/server/drizzle/0000_*.sql` | 迁移 SQL：tickets 表 |
 | `apps/server/drizzle/0001_*.sql` | 迁移 SQL：users 表 |
 | `apps/server/drizzle/0002_*.sql` | 迁移 SQL：users username 唯一索引 |
+| `apps/server/drizzle/0003_*.sql` | 迁移 SQL：tickets priority 列 |
+| `apps/server/drizzle/0004_*.sql` | 迁移 SQL：tickets due_date 列 |
+| `apps/server/drizzle/0005_*.sql` | 迁移 SQL：users password_hash 列 |
 | `apps/server/drizzle/meta/_journal.json` | Drizzle migrate() 追踪用 |
+| `apps/web/src/pages/AdminWorkbench.tsx` | 管理员工作台（用户管理） |
 
 ### 相关 Spec
 
@@ -401,7 +416,7 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 
 > **现状**：Cloudflare Workers Builds 只部署代码和静态资产，**不会自动执行数据库迁移和播种**。
 > 每次涉及 schema 变更的部署后，必须手动在 D1 Console 完成这两步。
-> 本地 `index.ts` 启动时自动 migrate + seed，但云端 `worker.ts` 没有这个能力。
+> 本地 `index.ts` 启动时自动 migrate，seed 通过 `pnpm db:seed` 执行，但云端 `worker.ts` 没有这个能力。
 
 ### 9.1 每次部署后的操作流程
 
@@ -434,6 +449,8 @@ CREATE TABLE IF NOT EXISTS `tickets` (
   `title` text NOT NULL,
   `description` text NOT NULL,
   `status` text DEFAULT 'submitted' NOT NULL,
+  `priority` text DEFAULT 'medium' NOT NULL,
+  `due_date` text,
   `created_by` text NOT NULL,
   `assigned_to` text,
   `created_at` text NOT NULL,
@@ -448,6 +465,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `username` text NOT NULL,
   `display_name` text NOT NULL,
   `role` text NOT NULL,
+  `password_hash` text NOT NULL DEFAULT '',
   `created_at` text NOT NULL
 );
 ```
@@ -465,13 +483,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`
 路径同上，D1 Console 执行：
 
 ```sql
-INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `created_at`) VALUES
-  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', '2026-01-01T00:00:00Z');
+INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `password_hash`, `created_at`) VALUES
+  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '38e1ecb1f9e092b3:9f33df3e56dee5a336712b3cf5ed9c248b5a0ce7ec4f1b54e9c35e6ee1dd6c03', '2026-01-01T00:00:00Z');
 ```
 
-> `INSERT OR IGNORE` 保证可重复执行（username 已存在则跳过）。
+> 密码：submitter/dispatcher/completer → `changeme`，admin → `admin`。`INSERT OR IGNORE` 保证可重复执行（username 已存在则跳过）。
 
 **播种 tickets（可选）：**
 
@@ -479,7 +498,7 @@ INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `create
 
 ```bash
 curl -c cookies.txt -X POST https://<域名>/api/auth/login \
-  -H 'Content-Type: application/json' -d '{"username": "submitter"}'
+  -H 'Content-Type: application/json' -d '{"username": "submitter", "password": "changeme"}'
 
 curl -b cookies.txt -X POST https://<域名>/api/tickets \
   -H 'Content-Type: application/json' \
@@ -493,6 +512,7 @@ curl -b cookies.txt -X POST https://<域名>/api/tickets \
 | mvp-user-auth | 部署后登录页空白 | D1 没有 `users` 表 | Console 执行 0001 + 0002 SQL |
 | mvp-user-auth | `Could not resolve "crypto"` | `sessions.ts` 用了 Node.js 专属 import | 改用全局 `crypto.randomUUID()`（fix-cloudflare-crypto） |
 | mvp-user-auth | `migrate()` 本地 crash | 迁移文件含多条 SQL | 拆分为单语句文件（0001 + 0002） |
+| mvp-user-management | 部署后登录失败 | D1 未执行 0005 password_hash migration，或预置用户 SQL 缺少 password_hash | Console 执行 0005 SQL，确保 users 表含 password_hash 列 |
 | 日常 | Cloudflare 构建用旧 commit | 短时间多次 push，中间构建失败 | Dashboard 点 Rebuild 用最新 commit |
 | 日常 | Wrangler CLI auth 失败 | 非交互环境无法 login | 用 Dashboard Console 替代 |
 

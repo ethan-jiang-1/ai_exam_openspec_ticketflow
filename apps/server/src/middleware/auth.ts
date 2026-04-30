@@ -21,7 +21,13 @@ export async function sessionMiddleware(c: Context<AuthVariables>, next: Next) {
   }
 
   const db = c.get('db')
-  const result = await db.select().from(users).where(eq(users.id, session.userId))
+  const result = await db.select({
+    id: users.id,
+    username: users.username,
+    displayName: users.displayName,
+    role: users.role,
+    createdAt: users.createdAt,
+  }).from(users).where(eq(users.id, session.userId))
   c.set('user', result[0] ?? null)
   await next()
 }

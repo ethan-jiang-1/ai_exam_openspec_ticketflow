@@ -51,7 +51,7 @@ describe('LoginPage', () => {
     expect(screen.getByText('完成者')).toBeInTheDocument()
   })
 
-  it('calls login on card click', async () => {
+  it('calls login with password on login button click', async () => {
     const loginFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ id: 'u1', username: 'submitter', displayName: '提交者', role: 'submitter' }),
@@ -77,7 +77,11 @@ describe('LoginPage', () => {
       expect(screen.getByText('提交者')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText('提交者'))
+    const passwordInputs = screen.getAllByPlaceholderText('输入密码')
+    fireEvent.change(passwordInputs[0], { target: { value: 'testpass' } })
+
+    const loginButtons = screen.getAllByRole('button', { name: /登/ })
+    fireEvent.click(loginButtons[0])
 
     await waitFor(() => {
       expect(loginFetch).toHaveBeenCalled()

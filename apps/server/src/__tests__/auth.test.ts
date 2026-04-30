@@ -2,30 +2,32 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createTestApp } from './helpers'
 import { users } from '../db/schema'
 import { sessionStore } from '../lib/sessions'
+import { hashPassword } from '../lib/password'
 
 const { app, db } = createTestApp()
 
-const testUser = {
-  id: 'u-test-00000000-0000-0000-000000000001',
-  username: 'testuser',
-  displayName: 'Test User',
-  role: 'submitter',
-  createdAt: new Date().toISOString(),
-}
+const testPassword = 'testpass'
 
 describe('Auth API', () => {
   beforeEach(async () => {
     sessionStore.clear()
     await db.delete(users)
-    await db.insert(users).values(testUser)
+    await db.insert(users).values({
+      id: 'u-test-00000000-0000-0000-000000000001',
+      username: 'testuser',
+      displayName: 'Test User',
+      role: 'submitter',
+      passwordHash: await hashPassword(testPassword),
+      createdAt: new Date().toISOString(),
+    })
   })
 
-  // Helper: login and return Set-Cookie header
-  async function login(username: string = 'testuser') {
+  // Helper: login and return response
+  async function login(username: string = 'testuser', password: string = testPassword) {
     return app.request('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ username, password }),
     })
   }
 
@@ -42,14 +44,14 @@ describe('Auth API', () => {
   })
 
   describe('POST /api/auth/login', () => {
-    it('returns user and sets cookie on valid username', async () => {
+    it('returns user and sets cookie on valid credentials', async () => {
       const res = await login()
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.username).toBe('testuser')
       expect(body.displayName).toBe('Test User')
       expect(body.role).toBe('submitter')
-      expect(body.id).toBe(testUser.id)
+      expect(body.id).toBe('u-test-00000000-0000-0000-000000000001')
 
       const setCookie = res.headers.get('set-cookie')
       expect(setCookie).toContain('ticketflow-session=')
@@ -59,15 +61,33 @@ describe('Auth API', () => {
       const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ password: 'x' }),
       })
       expect(res.status).toBe(400)
       const body = await res.json()
       expect(body).toHaveProperty('error')
     })
 
+    it('returns 400 when password is missing', async () => {
+      const res = await app.request('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'testuser' }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body).toHaveProperty('error')
+    })
+
+    it('returns 401 for wrong password', async () => {
+      const res = await login('testuser', 'wrong')
+      expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.error).toBe('密码错误')
+    })
+
     it('returns 401 for non-existent username', async () => {
-      const res = await login('nonexistent')
+      const res = await login('nonexistent', 'any')
       expect(res.status).toBe(401)
       const body = await res.json()
       expect(body).toHaveProperty('error')
@@ -85,6 +105,7 @@ describe('Auth API', () => {
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.username).toBe('testuser')
+      expect(body).not.toHaveProperty('passwordHash')
     })
 
     it('returns 401 without session cookie', async () => {
