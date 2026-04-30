@@ -100,23 +100,88 @@
 
 ---
 
-## 更强 MVP 参考方向
+## MVP1 阶段
 
-> MVP 达标后沿同一主线继续补强的方向，到时再推敲。
+> 目标：在 MVP 身份+权限基础上，补 session 安全、操作审计（ticket_history）、数据筛选、Dashboard 全局视图。
+> 核心思路：一张 `ticket_history` 表同时支撑「提交者工作台时间线」和「Dashboard 统计分析」，一次 migration 到位。
 
-### MVP1（可能的选择）— 沿"身份更真实 + 规则更稳"方向
+### MVP1 验收标准
 
-- Session 过期（cookie TTL + 自动跳转登录页）
-- 工单重新指派（dispatcher 可改 assignee）
-- 工单筛选/分页（antd Table 内置 filter + pagination）
-- 提交者结果视图增强（看到完整处理轨迹）
-- Dashboard 统计页（从 MVP ③ 推迟，等数据丰富后更有价值）
+- [ ] Session 24h TTL，过期自动跳转登录页并提示"会话已过期，请重新登录"
+- [ ] 工单可重新指派（dispatcher 在 submitted 或 assigned 状态均可改 assignee）
+- [ ] 三个工作台 Table 支持前端分页 + 状态筛选
+- [ ] 提交者工单详情展示完整处理时间线（基于 ticket_history）
+- [ ] Dashboard 统计页：总览 + 吞吐量 + 效率 + 人员负载
 
-### MVP2（可能的选择）— 沿"更可用 + 更可观"方向
+### 核心数据设计
+
+新增 `ticket_history` 表：
+
+```sql
+ticket_history (
+  id          TEXT PK,     -- UUID
+  ticket_id   TEXT NOT NULL REFERENCES tickets(id),
+  action      TEXT NOT NULL,  -- created | assigned | reassigned | started | completed
+  actor       TEXT NOT NULL,  -- username
+  from_status TEXT,           -- NULL only for 'created'
+  to_status   TEXT NOT NULL,
+  details     TEXT,           -- JSON: { assignee?, prevAssignee? }
+  created_at  TEXT NOT NULL
+)
+-- 索引
+INDEX (ticket_id, created_at)   -- 时间线查询
+INDEX (action, created_at)      -- Dashboard 聚合
+```
+
+Dashboard 依赖 ticket_history 的查询模式：
+
+| 指标 | 查询方式 |
+|------|----------|
+| 吞吐量（本周创建/完成） | `GROUP BY strftime('%Y-%W', created_at)` |
+| 平均响应时间（提交→指派） | join created + assigned 时间差 |
+| 平均处理时间（指派→完成） | join assigned + completed 时间差 |
+| 瓶颈（各状态平均停留） | 相邻状态对的 avg 时间差 |
+| 重新指派频率 | `COUNT(DISTINCT ticket_id) WHERE action='reassigned'` |
+| 人员负载 | `GROUP BY json_extract(details, '$.assignee')` |
+
+### Change 序列
+
+```
+① mvp1-session-ttl ──────── Session cookie 24h TTL + 前端自动登出
+│
+└──→ ② mvp1-ticket-history ─ ticket_history 表 + 迁移回填 + 重新指派 + GET history API
+     │
+     ├──→ ③ mvp1-filter-timeline  三个工作台分页筛选 + 共享 Timeline 组件 + 提交者时间线
+     │
+     └──→ ④ mvp1-dashboard ─────── Dashboard API + DashboardPage（Statistic/Card/Table）
+```
+
+| # | Change | 规模 | 核心交付 | 依赖 |
+|---|--------|------|----------|------|
+| 1 | `mvp1-session-ttl` | S | SessionStore 24h TTL + cookie maxAge + AuthContext 401 拦截 + 过期提示 | 无 |
+| 2 | `mvp1-ticket-history` | M | ticket_history schema + 迁移 + 回填 + 所有状态变更写入历史 + assign 扩展支持重新指派 + `GET /api/tickets/:id/history` | 1 |
+| 3 | `mvp1-filter-timeline` | M | 共享 `TicketDetailDrawer`（含 Timeline）+ 三个工作台 Table 分页 + 状态列筛选 + 提交者时间线视图 | 2 |
+| 4 | `mvp1-dashboard` | M | `GET /api/dashboard`（overview+throughput+efficiency+workload）+ DashboardPage + 导航入口 `/dashboard` | 2 |
+
+③ 和 ④ 无相互依赖，可并行。
+
+---
+
+## MVP2 参考方向
+
+> 在 MVP1 基础上继续演进的方向，届时再推敲。
+
+### 沿"更可用 + 更可观"
 
 - 自定义注册（从预置账号走向自注册用户名）
-- 工单评论 / 完成备注（新增 comments 表）
-- 工单关闭 / 拒绝（状态机扩展：submitted → rejected）
+- 工单评论 / 完成备注（新增 comments 表，参考 ticket_history 模式）
+- 工单关闭 / 拒绝（状态机扩展：submitted → rejected，completed → closed）
 - 批量操作（批量指派、批量关闭）
-- Dashboard 图表（antd Chart 柱状图/饼图展示趋势）
+- Dashboard 图表（antd Charts 柱状图/饼图，基于 ticket_history 历史数据）
 - 移动端响应式（antd Grid + 响应式断点）
+
+### MVP1 自然引出的方向
+
+- SLA 预警（ticket_history 已有状态时间戳，可计算各阶段 SLA 达标率）
+- 工单活动摘要（ticket_history 聚合 + comments 表 → 生成工单摘要视图）
+- 时效报表导出（ticket_history 数据完整，可导出 CSV 效率报告）
