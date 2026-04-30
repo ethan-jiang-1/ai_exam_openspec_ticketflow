@@ -86,6 +86,7 @@ Playwright config 通过 `process.env.E2E_BASE_URL` 读取，默认 `http://loca
 - **[Risk] 远程测试可能因网络问题超时** → 设置 30s 超时 + 失败时自动截图到 `tests/e2e/screenshots/`
 - **[Risk] antd 中文文本在 DOM 中可能被 split（如"登 录"）** → 使用 `has-text` 或正则匹配，已在组件测试中验证可行
 - **[Risk] E2E 测试耗时较长（~30s+）** → 不在 `pnpm check` 中自动运行，需要手动 `pnpm e2e`
+- **[Risk] E2E 测试不可幂等——工作流测试创建真实工单数据，反复运行本地测试会累积「E2E Test Ticket」** → 本地 dev server 重启时会重建 DB（`data/ticketflow.db` 自动 migrate），数据自动清除；远程 D1 需手动在 Console 删除测试工单
 
 ## Open Questions
 

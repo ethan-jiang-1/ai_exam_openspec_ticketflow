@@ -92,6 +92,14 @@ E2E 测试模式和诊断模式 SHALL 均自动捕获浏览器 console.log 和 n
 - **AND** 点击「登录」按钮或按 Enter
 - **THEN** 页面 SHALL 显示「请输入用户名」验证提示
 
+#### Scenario: 空密码提交显示验证错误
+
+- **WHEN** 浏览器访问 `/login`
+- **AND** 用户名输入 `admin`
+- **AND** 密码为空
+- **AND** 点击「登录」按钮或按 Enter
+- **THEN** 页面 SHALL 显示「请输入密码」验证提示
+
 #### Scenario: 登录后 cookie 持久化
 
 - **WHEN** 登录成功后

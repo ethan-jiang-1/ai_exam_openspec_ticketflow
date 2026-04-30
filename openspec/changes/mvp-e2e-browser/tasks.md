@@ -6,19 +6,21 @@
 - [ ] 1.4 安装 Playwright Chromium 浏览器二进制（`pnpm exec playwright install chromium`） [BA-001]
 - [ ] 1.5 创建 `tests/e2e/fixtures/auth.ts`——登录 helper：`login(page, username, password)` 执行完整表单填写+提交+等待跳转 [BA-003]
 - [ ] 1.6 在 `openspec/config.yaml` capability 编码表注册 `BA = browser-automation` [BA-001]
+- [ ] 1.7 在 `.gitignore` 中添加 `test-results/`、`playwright-report/`、`tests/e2e/screenshots/` 忽略规则
 
 ## 2. 独立诊断工具 [BA-001, BA-002]
 
 - [ ] 2.1 创建 `scripts/e2e-diagnose.mjs`——使用 Playwright core API（`chromium.launch({ headless: false })`），从 `E2E_BASE_URL` 读取目标 URL，打开有头浏览器 [BA-001]
 - [ ] 2.2 诊断脚本中注册 `page.on('console')` 和 `page.on('request')` / `page.on('response')` 监听，实时输出到终端带 `[browser console]` 和 `[network]` 前缀 [BA-002]
-- [ ] 2.3 诊断脚本 `Ctrl+C` 退出时保存当前页面截图到 `tests/e2e/screenshots/diagnose-<timestamp>.png` [BA-002]
+- [ ] 2.3 诊断脚本在 `Ctrl+C` 退出或关闭浏览器窗口时保存当前页面截图到 `tests/e2e/screenshots/diagnose-<timestamp>.png` [BA-002]
 
 ## 3. 登录流程 E2E 测试 [BA-003]
 
 - [ ] 3.1 创建 `tests/e2e/login.spec.ts`：测试表单式登录成功跳转（admin/admin → /workbench/admin） [BA-003]
 - [ ] 3.2 添加测试：错误密码显示错误消息（admin/wrongpassword → 错误提示 + URL 仍为 /login） [BA-003]
 - [ ] 3.3 添加测试：空用户名提交显示验证错误 [BA-003]
-- [ ] 3.4 添加测试：登录后 cookie 持久化（登录后 goto('/workbench/admin') 不跳回登录页） [BA-003]
+- [ ] 3.4 添加测试：空密码提交显示验证错误 [BA-003]
+- [ ] 3.5 添加测试：登录后 cookie 持久化（登录后 goto('/workbench/admin') 不跳回登录页） [BA-003]
 
 ## 4. 角色路由 E2E 测试 [BA-004]
 

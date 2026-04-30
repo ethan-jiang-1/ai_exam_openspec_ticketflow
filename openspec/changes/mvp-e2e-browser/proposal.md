@@ -28,6 +28,7 @@
 
 - `package.json`（根）: 新增 `@playwright/test` devDependency + `e2e`/`e2e:local`/`e2e:remote`/`e2e:diagnose` 四个脚本
 - `pnpm-lock.yaml`: 依赖锁更新
+- `.gitignore`: 新增 `test-results/`、`playwright-report/`、`tests/e2e/screenshots/` 忽略规则
 - `tests/e2e/`: 新目录，包含 `playwright.config.ts`、`login.spec.ts`、`routing.spec.ts`、`workflow.spec.ts`、`fixtures/`、`screenshots/`
 - `scripts/e2e-diagnose.mjs`: 独立诊断工具——启动有头浏览器、访问指定 URL、捕获所有 console/network 输出、浏览器保持打开供人工查看
 - `openspec/config.yaml`: 注册 BA capability 缩写
