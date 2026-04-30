@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Table, Button, Modal, Input, Select, Popconfirm, Space, App as AntdApp } from 'antd'
-import { ROLES } from '@ticketflow/shared'
-import type { User } from '@ticketflow/shared'
+import { Table, Button, Modal, Input, Select, Popconfirm, Space, Row, Col, Card, App as AntdApp } from 'antd'
+import { ROLES, ROLE_LABELS } from '@ticketflow/shared'
+import type { User, Role } from '@ticketflow/shared'
+import { useAuth } from '../context/AuthContext'
 import { getAdminUsers, createUser, updateUser, deleteUser } from '../api/client'
 
 const ROLE_OPTIONS = Object.entries(ROLES).map(([, value]) => ({
@@ -18,6 +19,7 @@ interface UserFormData {
 
 export default function AdminWorkbench() {
   const { message } = AntdApp.useApp()
+  const { user } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -115,12 +117,15 @@ export default function AdminWorkbench() {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string) => {
-        const labels: Record<string, string> = { submitter: '提交者', dispatcher: '调度者', completer: '完成者', admin: '管理员' }
-        return labels[role] ?? role
+      render: (role: string) => ROLE_LABELS[role as Role] ?? role,
+    },
+    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt',
+      render: (v: string) => {
+        const d = new Date(v)
+        const pad = (n: number) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
       },
     },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt' },
     {
       title: '操作',
       key: 'actions',
@@ -142,8 +147,43 @@ export default function AdminWorkbench() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>用户管理</h2>
+      <h2 style={{ marginBottom: 8 }}>用户管理</h2>
+      <p style={{ color: '#666', marginBottom: 16 }}>你好，{user?.displayName}</p>
+
+      <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
+        <Col xs={12} sm={4}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{users.length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>用户总数</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={4}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{users.filter((u) => u.role === 'submitter').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>提交者</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={4}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{users.filter((u) => u.role === 'dispatcher').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>调度者</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={4}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{users.filter((u) => u.role === 'completer').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>完成者</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={4}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{users.filter((u) => u.role === 'admin').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>管理员</div>
+          </Card>
+        </Col>
+      </Row>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         <Button type="primary" onClick={openCreate}>新增用户</Button>
       </div>
 

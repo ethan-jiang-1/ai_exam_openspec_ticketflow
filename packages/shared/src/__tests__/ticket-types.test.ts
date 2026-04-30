@@ -7,6 +7,11 @@ import {
   PRIORITIES,
   PRIORITY_ORDER,
   PRIORITY_LABELS,
+  PRIORITY_COLORS,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  ROLE_LABELS,
+  ROLE_COLORS,
   type Role,
   type TicketStatus,
   type Ticket,
@@ -91,6 +96,50 @@ describe('PRIORITY_LABELS', () => {
     expect(PRIORITY_LABELS.low).toBe('低')
     expect(PRIORITY_LABELS.medium).toBe('中')
     expect(PRIORITY_LABELS.high).toBe('高')
+  })
+})
+
+describe('PRIORITY_COLORS', () => {
+  it('should have color for every priority', () => {
+    expect(PRIORITY_COLORS.low).toBeTruthy()
+    expect(PRIORITY_COLORS.medium).toBeTruthy()
+    expect(PRIORITY_COLORS.high).toBeTruthy()
+  })
+})
+
+describe('STATUS_LABELS', () => {
+  it('should return Chinese labels for all statuses', () => {
+    expect(STATUS_LABELS.submitted).toBe('已提交')
+    expect(STATUS_LABELS.assigned).toBe('已指派')
+    expect(STATUS_LABELS.in_progress).toBe('处理中')
+    expect(STATUS_LABELS.completed).toBe('已完成')
+  })
+})
+
+describe('STATUS_COLORS', () => {
+  it('should have color for every status', () => {
+    expect(STATUS_COLORS.submitted).toBeTruthy()
+    expect(STATUS_COLORS.assigned).toBeTruthy()
+    expect(STATUS_COLORS.in_progress).toBeTruthy()
+    expect(STATUS_COLORS.completed).toBeTruthy()
+  })
+})
+
+describe('ROLE_LABELS', () => {
+  it('should return Chinese labels for all roles', () => {
+    expect(ROLE_LABELS.submitter).toBe('提交者')
+    expect(ROLE_LABELS.dispatcher).toBe('调度者')
+    expect(ROLE_LABELS.completer).toBe('完成者')
+    expect(ROLE_LABELS.admin).toBe('管理员')
+  })
+})
+
+describe('ROLE_COLORS', () => {
+  it('should have color for every role', () => {
+    expect(ROLE_COLORS.submitter).toBeTruthy()
+    expect(ROLE_COLORS.dispatcher).toBeTruthy()
+    expect(ROLE_COLORS.completer).toBeTruthy()
+    expect(ROLE_COLORS.admin).toBeTruthy()
   })
 })
 

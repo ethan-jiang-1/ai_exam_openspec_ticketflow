@@ -1,28 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Select, Empty, Drawer, Descriptions, App as AntdApp } from 'antd'
+import { Table, Tag, Button, Select, Empty, Drawer, Descriptions, Row, Col, Card, App as AntdApp } from 'antd'
 import { getTickets, getUsers, assignTicket } from '../api/client'
-import { PRIORITY_LABELS, PRIORITY_ORDER } from '@ticketflow/shared'
-import type { Ticket, Priority, User } from '@ticketflow/shared'
-
-const STATUS_COLORS: Record<string, string> = {
-  submitted: 'blue',
-  assigned: 'gold',
-  in_progress: 'orange',
-  completed: 'green',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  submitted: '已提交',
-  assigned: '已指派',
-  in_progress: '处理中',
-  completed: '已完成',
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  high: 'red',
-  medium: 'orange',
-  low: 'blue',
-}
+import { useAuth } from '../context/AuthContext'
+import { PRIORITY_LABELS, PRIORITY_ORDER, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '@ticketflow/shared'
+import type { Ticket, Priority, TicketStatus, User } from '@ticketflow/shared'
 
 export default function DispatcherWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -30,14 +11,16 @@ export default function DispatcherWorkbench() {
   const [assignees, setAssignees] = useState<User[]>([])
   const [assignValues, setAssignValues] = useState<Record<string, string>>({})
   const { message } = AntdApp.useApp()
+  const { user } = useAuth()
+
+  const displayTickets = tickets
+    .filter((t) => t.status !== 'completed')
+    .sort((a, b) => (PRIORITY_ORDER[b.priority] ?? 0) - (PRIORITY_ORDER[a.priority] ?? 0))
 
   const fetchTickets = async () => {
     try {
       const all = await getTickets()
-      const filtered = all
-        .filter((t) => t.status !== 'completed')
-        .sort((a, b) => (PRIORITY_ORDER[b.priority] ?? 0) - (PRIORITY_ORDER[a.priority] ?? 0))
-      setTickets(filtered)
+      setTickets(all)
     } catch (e) {
       message.error(e instanceof Error ? e.message : '获取工单失败')
     }
@@ -80,14 +63,14 @@ export default function DispatcherWorkbench() {
       dataIndex: 'priority',
       key: 'priority',
       width: 80,
-      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
+      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority as Priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: string) => <Tag color={STATUS_COLORS[status]}>{status}</Tag>,
+      render: (status: string) => <Tag color={STATUS_COLORS[status as TicketStatus]}>{STATUS_LABELS[status as TicketStatus] || status}</Tag>,
     },
     { title: '创建者', dataIndex: 'createdBy', key: 'createdBy', width: 100, responsive: ['lg'] as ('lg')[] },
     {
@@ -132,13 +115,41 @@ export default function DispatcherWorkbench() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 16 }}>调度者工作台</h2>
+      <h2 style={{ marginBottom: 8 }}>调度者工作台</h2>
+      <p style={{ color: '#666', marginBottom: 16 }}>你好，{user?.displayName}</p>
 
-      {tickets.length === 0 ? (
+      <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'submitted').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>待指派</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'assigned').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>已指派</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'in_progress').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>处理中</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'completed').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>已完成</div>
+          </Card>
+        </Col>
+      </Row>
+
+      {displayTickets.length === 0 ? (
         <Empty description="暂无待处理的工单" />
       ) : (
         <Table
-          dataSource={tickets}
+          dataSource={displayTickets}
           columns={columns}
           rowKey="id"
           pagination={false}

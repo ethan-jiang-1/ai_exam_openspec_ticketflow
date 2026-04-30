@@ -359,6 +359,69 @@ describe('Priority display', () => {
   })
 })
 
+describe('Status label display', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+  })
+
+  it('shows Chinese status labels in SubmitterWorkbench table', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+    expect(screen.getByText('已提交')).toBeInTheDocument()
+  })
+
+  it('shows Chinese status labels in DispatcherWorkbench table', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+    expect(screen.getAllByText('已提交').length).toBeGreaterThan(0)
+  })
+})
+
+describe('Completer dynamic filtering', () => {
+  it('filters by logged-in completer username not hardcoded string', async () => {
+    vi.restoreAllMocks()
+    const customCompleter = { id: 'u-custom', username: 'worker99', displayName: 'Worker', role: 'completer' as const, createdAt: '2026-01-01T00:00:00Z' }
+    const customTickets = [
+      { id: '1', title: 'My Task', description: '', status: 'assigned', priority: 'high', dueDate: null, createdBy: 'submitter', assignedTo: 'worker99', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+      { id: '2', title: 'Other Task', description: '', status: 'assigned', priority: 'medium', dueDate: null, createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+    ]
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(customCompleter) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(customTickets) } as Response)
+    })
+    renderPage('/workbench/completer', <CompleterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('My Task')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Other Task')).not.toBeInTheDocument()
+  })
+})
+
 describe('Dispatcher assignee dropdown', () => {
   beforeEach(() => {
     vi.restoreAllMocks()

@@ -98,23 +98,29 @@ pnpm dev
 
 **2. 提交者创建工单**
 
-- 在角色选择页点击「提交者」
-- 填写工单标题（如 "修复登录页面 Bug"）和描述
+- 在登录页找到「提交者」卡片，输入密码 `changeme`，点击「登录」
+- 填写工单标题（如 "修复登录页面 Bug"）、描述、优先级和截止日期
 - 点击「提交工单」
+- 工单出现在下方列表中，可点击查看详情
 
 **3. 调度者指派工单**
 
-- 点击「切换角色」回到选择页
-- 点击「调度者」
-- 在待指派工单的「指派人」输入框填入 `completer`
+- 点击左侧「退出登录」回到登录页
+- 选择「调度者」，输入密码 `changeme`，点击「登录」
+- 在待指派的工单行中，通过下拉选择指派人（如 completer）
 - 点击「指派」
 
 **4. 完成者处理工单**
 
-- 切换角色，选择「完成者」
+- 退出登录，选择「完成者」，输入密码 `changeme`，点击「登录」
 - 点击工单的「开始处理」
 - 状态变为 in_progress 后，点击「完成」
 - 工单状态变为 completed，流转结束
+
+**5. 管理员管理用户（可选）**
+
+- 退出登录，选择「管理员」，输入密码 `admin`，点击「登录」
+- 进入用户管理工作台，可新增/编辑/删除用户
 
 ---
 
@@ -131,12 +137,12 @@ pnpm dev
 - [x] priority / assignee / dueDate 等关键字段开始进入主线判断
 - [x] 至少一组关键状态推进有明确规则
 - [x] 非法推进时有清楚反馈
-- [ ] 提交者能看到与自己相关的结果视图
-- [ ] 登录、字段、规则、反馈一起服务同一条主线
+- [x] 提交者能看到与自己相关的结果视图
+- [x] 登录、字段、规则、反馈一起服务同一条主线
 
 ### 决策记录
 
-- **登录方案**：预置 3 个账号（submitter/dispatcher/completer），登录页选择账号即登录，无需密码
+- **登录方案**：预置 4 个账号（submitter/dispatcher/completer/admin），PBKDF2-SHA256 密码认证
 - **UI 库**：Ant Design（antd）— 中文产品最自然的选择，Table/Form/Tag/DatePicker/Message/Drawer/Statistic 开箱即用
 - **视觉增强**：Dashboard 统计页 + 工单详情 Drawer，让 MVP 看起来像成熟产品
 
@@ -151,9 +157,9 @@ pnpm dev
 │
 └──→ ④ mvp-ticket-enrichment ─ priority/dueDate + assignee 下拉 + 工单详情 Drawer ✓ 已完成
         │
-        └──→ ⑤ mvp-user-management ── admin 角色 + 用户 CRUD + 密码认证
+        └──→ ⑤ mvp-user-management ── admin 角色 + 用户 CRUD + 密码认证 ✓ 已完成
                 │
-                └──→ ⑥ mvp-integration ── 端到端测试 + MVP 演示文档 + README
+                └──→ ⑥ mvp-integration ── 端到端测试 + MVP 演示文档 + README ✓ 已完成
 ```
 
 | # | Change | 规模 | 核心交付 | 满足验收 |
@@ -162,8 +168,8 @@ pnpm dev
 | 2 | `mvp-user-auth` | M | users 表 + seed 3 个预置账号 + auth API + 登录页 + AuthContext + 路由守卫 | #1, #2 |
 | 3 | `mvp-permission` | M | 服务端权限中间件 + 403 中文提示 + 前端动作可见性 | #3, #6, #7 |
 | 4 | `mvp-ticket-enrichment` | S | priority + dueDate + assignee 下拉 + 优先级排序 + 工单详情 Drawer | #4, #5 |
-| 5 | `mvp-user-management` | M | admin 角色 + 用户 CRUD API + 密码字段 + 管理员工作台 | 身份体系完善 |
-| 6 | `mvp-integration` | S | 端到端集成测试 + 权限测试 + README MVP 演示步骤 | #8 |
+| 5 | `mvp-user-management` | M | admin 角色 + 用户 CRUD API + 密码字段 + 管理员工作台 | 身份体系完善 | ✓ |
+| 6 | `mvp-integration` | S | UI 美化 + bug 修复 + 共享常量 + 品牌标识 + 收尾 | #8 | ✓ |
 
 ### 更强 MVP 参考方向
 
@@ -171,11 +177,9 @@ pnpm dev
 
 **MVP1（可能的选择）— 沿"身份更真实 + 规则更稳"方向**
 
-- 密码认证（预置账号加密码，antd Form 验证）
 - Session 过期（cookie TTL + 自动跳转登录页）
 - 工单重新指派（dispatcher 可改 assignee）
 - 工单筛选/分页（antd Table 内置 filter + pagination）
-- 临近到期视觉警告（dueDate 接近时红色高亮）
 - 提交者结果视图增强（看到完整处理轨迹）
 - Dashboard 统计页（从 MVP ③ 推迟，等数据丰富后更有价值）
 

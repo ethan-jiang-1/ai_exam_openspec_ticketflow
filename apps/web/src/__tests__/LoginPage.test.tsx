@@ -9,6 +9,7 @@ const mockUsers = [
   { username: 'submitter', displayName: '提交者', role: 'submitter' },
   { username: 'dispatcher', displayName: '调度者', role: 'dispatcher' },
   { username: 'completer', displayName: '完成者', role: 'completer' },
+  { username: 'admin', displayName: '管理员', role: 'admin' },
 ]
 
 function renderLoginPage() {
@@ -45,10 +46,10 @@ describe('LoginPage', () => {
     renderLoginPage()
 
     await waitFor(() => {
-      expect(screen.getByText('提交者')).toBeInTheDocument()
+      expect(screen.getAllByText('提交者').length).toBeGreaterThan(0)
     })
-    expect(screen.getByText('调度者')).toBeInTheDocument()
-    expect(screen.getByText('完成者')).toBeInTheDocument()
+    expect(screen.getAllByText('调度者').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('完成者').length).toBeGreaterThan(0)
   })
 
   it('calls login with password on login button click', async () => {
@@ -74,7 +75,7 @@ describe('LoginPage', () => {
     renderLoginPage()
 
     await waitFor(() => {
-      expect(screen.getByText('提交者')).toBeInTheDocument()
+      expect(screen.getAllByText('提交者').length).toBeGreaterThan(0)
     })
 
     const passwordInputs = screen.getAllByPlaceholderText('输入密码')

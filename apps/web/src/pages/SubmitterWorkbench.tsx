@@ -1,29 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Form, Input, Button, Select, DatePicker, Table, Tag, Drawer, Descriptions, App as AntdApp } from 'antd'
+import { Form, Input, Button, Select, DatePicker, Table, Tag, Drawer, Descriptions, Row, Col, Card, Empty, App as AntdApp } from 'antd'
 import { getTickets, createTicket } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { PRIORITY_LABELS } from '@ticketflow/shared'
-import type { Ticket, Priority } from '@ticketflow/shared'
-
-const STATUS_COLORS: Record<string, string> = {
-  submitted: 'blue',
-  assigned: 'gold',
-  in_progress: 'orange',
-  completed: 'green',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  submitted: '已提交',
-  assigned: '已指派',
-  in_progress: '处理中',
-  completed: '已完成',
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  high: 'red',
-  medium: 'orange',
-  low: 'blue',
-}
+import { PRIORITY_LABELS, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '@ticketflow/shared'
+import type { Ticket, Priority, TicketStatus } from '@ticketflow/shared'
 
 export default function SubmitterWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -80,14 +60,14 @@ export default function SubmitterWorkbench() {
       dataIndex: 'priority',
       key: 'priority',
       width: 80,
-      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
+      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority as Priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: string) => <Tag color={STATUS_COLORS[status]}>{status}</Tag>,
+      render: (status: string) => <Tag color={STATUS_COLORS[status as TicketStatus]}>{STATUS_LABELS[status as TicketStatus] || status}</Tag>,
     },
     {
       title: '创建时间',
@@ -101,7 +81,35 @@ export default function SubmitterWorkbench() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 16 }}>提交者工作台</h2>
+      <h2 style={{ marginBottom: 8 }}>提交者工作台</h2>
+      <p style={{ color: '#666', marginBottom: 16 }}>你好，{user?.displayName}</p>
+
+      <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>我的工单</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'submitted').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>待处理</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'assigned' || t.status === 'in_progress').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>处理中</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{tickets.filter((t) => t.status === 'completed').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>已完成</div>
+          </Card>
+        </Col>
+      </Row>
 
       <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ maxWidth: 480, width: '100%', margin: '0 auto 24px' }}>
         <Form.Item name="title" label="工单标题" rules={[{ required: true, message: '请输入工单标题' }, { max: 200, message: '标题不能超过 200 个字符' }]}>
@@ -129,13 +137,17 @@ export default function SubmitterWorkbench() {
         </Form.Item>
       </Form>
 
-      <Table
-        dataSource={tickets}
-        columns={columns}
-        rowKey="id"
-        pagination={false}
-        scroll={{ x: 'max-content' }}
-      />
+      {tickets.length === 0 ? (
+        <Empty description="暂无提交的工单" />
+      ) : (
+        <Table
+          dataSource={tickets}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+        />
+      )}
 
       <Drawer
         title={selectedTicket?.title}

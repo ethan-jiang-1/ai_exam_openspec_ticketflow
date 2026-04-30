@@ -103,7 +103,7 @@ export interface User {
 #### Scenario: 返回用户列表
 
 - **WHEN** 发送 `GET /api/auth/users`
-- **THEN** SHALL 返回 200，body 为包含 3 个用户的数组，每个用户包含 username / displayName / role 字段
+- **THEN** SHALL 返回 200，body 为包含 4 个用户的数组，每个用户包含 username / displayName / role 字段
 
 ### Requirement: UA-006 Auth API — POST /api/auth/login
 
@@ -235,14 +235,14 @@ interface AuthContextValue {
 
 ### Requirement: UA-011 登录页
 
-`/login` 路由 SHALL 显示 `LoginPage` 组件：调用 `GET /api/auth/users` 获取可选用户列表，使用 antd `Row` / `Col`（`xs={24} sm={8}`）+ antd `Card`（`hoverable`）展示每个用户。Card 标题为 displayName，描述为角色名。每张 Card 内 SHALL 包含 antd `Input.Password` 密码输入框和"登录"按钮。点击"登录"SHALL 将对应 username 和密码输入框的值一起传入 `login(username, password)`，成功后 navigate 到 `"/workbench/" + user.role`。
+`/login` 路由 SHALL 显示 `LoginPage` 组件：调用 `GET /api/auth/users` 获取可选用户列表，使用 antd `Row` / `Col`（`xs={24} sm={8}`）+ antd `Card`（`hoverable`）展示每个用户。Card 标题为 displayName，描述为角色中文名（而非英文 key）。每张 Card 内 SHALL 包含 antd `Input.Password` 密码输入框和"登录"按钮。Card SHALL 根据角色显示不同左侧边框颜色。点击"登录"SHALL 将对应 username 和密码输入框的值一起传入 `login(username, password)`，成功后 navigate 到 `"/workbench/" + user.role`。
 
 已登录用户访问 `/login` SHALL 自动跳转到 `"/workbench/" + user.role`。
 
 #### Scenario: 登录页展示用户卡片与密码输入框
 
 - **WHEN** 访问 `/login`
-- **THEN** 页面 SHALL 显示 3 个（或更多）antd Card，每个 Card 标题为 displayName，包含 Input.Password 和"登录"按钮
+- **THEN** 页面 SHALL 显示 4 个 antd Card，每个 Card 标题为 displayName，描述为中文角色名（提交者/调度者/完成者/管理员），包含 Input.Password 和"登录"按钮
 
 #### Scenario: 输入密码后点击登录成功
 

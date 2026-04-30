@@ -1,30 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Drawer, Descriptions, App as AntdApp } from 'antd'
+import { Table, Tag, Button, Drawer, Descriptions, Row, Col, Card, Empty, App as AntdApp } from 'antd'
 import { getTickets, startTicket, completeTicket } from '../api/client'
-import { PRIORITY_LABELS } from '@ticketflow/shared'
-import type { Ticket, Priority } from '@ticketflow/shared'
-
-const STATUS_COLORS: Record<string, string> = {
-  submitted: 'blue',
-  assigned: 'gold',
-  in_progress: 'orange',
-  completed: 'green',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  submitted: '已提交',
-  assigned: '已指派',
-  in_progress: '处理中',
-  completed: '已完成',
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  high: 'red',
-  medium: 'orange',
-  low: 'blue',
-}
+import { useAuth } from '../context/AuthContext'
+import { PRIORITY_LABELS, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '@ticketflow/shared'
+import type { Ticket, Priority, TicketStatus } from '@ticketflow/shared'
 
 export default function CompleterWorkbench() {
+  const { user } = useAuth()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const { message } = AntdApp.useApp()
@@ -32,21 +14,19 @@ export default function CompleterWorkbench() {
   const fetchTickets = async () => {
     try {
       const all = await getTickets()
-      setTickets(
-        all.filter(
-          (t) =>
-            t.assignedTo === 'completer' &&
-            (t.status === 'assigned' || t.status === 'in_progress'),
-        ),
-      )
+      setTickets(all.filter((t) => t.assignedTo === user?.username))
     } catch (e) {
       message.error(e instanceof Error ? e.message : '获取工单失败')
     }
   }
 
+  const displayTickets = tickets.filter(
+    (t) => t.status === 'assigned' || t.status === 'in_progress',
+  )
+
   useEffect(() => {
-    fetchTickets()
-  }, [])
+    if (user) fetchTickets()
+  }, [user])
 
   const handleStart = async (id: string) => {
     try {
@@ -82,14 +62,14 @@ export default function CompleterWorkbench() {
       dataIndex: 'priority',
       key: 'priority',
       width: 80,
-      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
+      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority as Priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: string) => <Tag color={STATUS_COLORS[status]}>{status}</Tag>,
+      render: (status: string) => <Tag color={STATUS_COLORS[status as TicketStatus]}>{STATUS_LABELS[status as TicketStatus] || status}</Tag>,
     },
     { title: '创建者', dataIndex: 'createdBy', key: 'createdBy', width: 100, responsive: ['lg'] as ('lg')[] },
     {
@@ -127,15 +107,47 @@ export default function CompleterWorkbench() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 16 }}>完成者工作台</h2>
+      <h2 style={{ marginBottom: 8 }}>完成者工作台</h2>
+      <p style={{ color: '#666', marginBottom: 16 }}>你好，{user?.displayName}</p>
 
-      <Table
-        dataSource={tickets}
-        columns={columns}
-        rowKey="id"
-        pagination={false}
-        scroll={{ x: 'max-content' }}
-      />
+      <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
+        <Col xs={12} sm={8}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{displayTickets.filter((t) => t.status === 'assigned').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>待处理</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={8}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>{displayTickets.filter((t) => t.status === 'in_progress').length}</div>
+            <div style={{ color: '#666', fontSize: 13 }}>处理中</div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={8}>
+          <Card size="small" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 600 }}>
+              {tickets.filter((t) => {
+                if (t.status !== 'completed') return false
+                const today = new Date().toISOString().slice(0, 10)
+                return t.updatedAt.slice(0, 10) === today
+              }).length}
+            </div>
+            <div style={{ color: '#666', fontSize: 13 }}>今日完成</div>
+          </Card>
+        </Col>
+      </Row>
+
+      {displayTickets.length === 0 ? (
+        <Empty description="暂无待处理的工单" />
+      ) : (
+        <Table
+          dataSource={displayTickets}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+        />
+      )}
 
       <Drawer
         title={selectedTicket?.title}
@@ -150,6 +162,25 @@ export default function CompleterWorkbench() {
             </Descriptions.Item>
             <Descriptions.Item label="优先级">
               <Tag color={PRIORITY_COLORS[selectedTicket.priority]}>{PRIORITY_LABELS[selectedTicket.priority as Priority] ?? selectedTicket.priority}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="截止日期">
+              {selectedTicket.dueDate
+                ? (() => {
+                    const d = new Date(selectedTicket.dueDate)
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const due = new Date(selectedTicket.dueDate + 'T00:00:00')
+                    const isOverdue = due < today
+                    const isToday = due.getTime() === today.getTime()
+                    return (
+                      <span style={(isOverdue || isToday) ? { color: 'red' } : {}}>
+                        {d.toLocaleDateString()}
+                        {isOverdue && <Tag color="red" style={{ marginLeft: 4 }}>已到期</Tag>}
+                        {isToday && <Tag color="red" style={{ marginLeft: 4 }}>今日到期</Tag>}
+                      </span>
+                    )
+                  })()
+                : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="创建者">{selectedTicket.createdBy}</Descriptions.Item>
             <Descriptions.Item label="指派给">{selectedTicket.assignedTo ?? '—'}</Descriptions.Item>
