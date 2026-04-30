@@ -147,7 +147,7 @@ pnpm dev
 │
 ├──→ ② mvp-user-auth ──── 用户表 + 预置账号登录 + 会话 + 角色路由 ✓ 已完成
 │
-├──→ ③ mvp-permission ──── 权限中间件 + Dashboard 统计页（视觉亮点） ✓ 已完成
+├──→ ③ mvp-permission ──── 权限中间件（Dashboard 推迟到 MVP1） ✓ 已完成
 │
 └──→ ④ mvp-ticket-enrichment ─ priority/dueDate + 工单详情 Drawer（视觉亮点）
         │
@@ -158,7 +158,7 @@ pnpm dev
 |---|--------|------|----------|----------|
 | 1 | `mvp-ui-upgrade` | M | antd 依赖 + Layout/Table/Tag/Form/Card 重构 + 精简 CSS | 视觉基础 |
 | 2 | `mvp-user-auth` | M | users 表 + seed 3 个预置账号 + auth API + 登录页 + AuthContext + 路由守卫 | #1, #2 |
-| 3 | `mvp-permission` | M | 服务端权限中间件 + 403 中文提示 + 前端动作可见性 + Dashboard 统计页 | #3, #6, #7 |
+| 3 | `mvp-permission` | M | 服务端权限中间件 + 403 中文提示 + 前端动作可见性 | #3, #6, #7 |
 | 4 | `mvp-ticket-enrichment` | S | priority + dueDate + assignee 下拉 + 优先级排序 + 工单详情 Drawer | #4, #5 |
 | 5 | `mvp-integration` | S | 端到端集成测试 + 权限测试 + README MVP 演示步骤 | #8 |
 
@@ -174,6 +174,7 @@ pnpm dev
 - 工单筛选/分页（antd Table 内置 filter + pagination）
 - 临近到期视觉警告（dueDate 接近时红色高亮）
 - 提交者结果视图增强（看到完整处理轨迹）
+- Dashboard 统计页（从 MVP ③ 推迟，等数据丰富后更有价值）
 
 **MVP2（可能的选择）— 沿"更可用 + 更可观"方向**
 
