@@ -75,13 +75,15 @@ pnpm check
 - [x] 三个工作台看到同一条 ticket 的同一次流转
 - [x] 无真实登录情况下角色视角已分开
 
-### 不包含（留给 MVP）
+### Demo → MVP 演进
 
-- 真实登录 / 账号体系
-- priority / dueDate 等扩展字段
-- 服务端权限控制
-- 表单高级验证
-- 通知 / 实时更新
+| Demo 不包含 | MVP 状态 |
+|------------|----------|
+| 真实登录 / 账号体系 | ✅ PBKDF2-SHA256 密码认证 + 4 角色预置账号 + 正式登录页 |
+| priority / dueDate 等扩展字段 | ✅ 已交付（mvp-ticket-enrichment） |
+| 服务端权限控制 | ✅ requirePermission 中间件 + 6 权限动作 |
+| 表单高级验证 | ✅ 登录表单校验 + 创建工单必填校验 |
+| 通知 / 实时更新 | 🔜 留待 MVP1+ |
 
 ## 演示步骤
 
@@ -98,7 +100,7 @@ pnpm dev
 
 **2. 提交者创建工单**
 
-- 在登录页找到「提交者」卡片，输入密码 `changeme`，点击「登录」
+- 在登录页输入用户名 `submitter`，密码 `changeme`，点击「登录」
 - 填写工单标题（如 "修复登录页面 Bug"）、描述、优先级和截止日期
 - 点击「提交工单」
 - 工单出现在下方列表中，可点击查看详情
@@ -106,20 +108,20 @@ pnpm dev
 **3. 调度者指派工单**
 
 - 点击左侧「退出登录」回到登录页
-- 选择「调度者」，输入密码 `changeme`，点击「登录」
+- 输入用户名 `dispatcher`，密码 `changeme`，点击「登录」
 - 在待指派的工单行中，通过下拉选择指派人（如 completer）
 - 点击「指派」
 
 **4. 完成者处理工单**
 
-- 退出登录，选择「完成者」，输入密码 `changeme`，点击「登录」
+- 退出登录，输入用户名 `completer`，密码 `changeme`，点击「登录」
 - 点击工单的「开始处理」
 - 状态变为 in_progress 后，点击「完成」
 - 工单状态变为 completed，流转结束
 
 **5. 管理员管理用户（可选）**
 
-- 退出登录，选择「管理员」，输入密码 `admin`，点击「登录」
+- 退出登录，输入用户名 `admin`，密码 `admin`，点击「登录」
 - 进入用户管理工作台，可新增/编辑/删除用户
 
 ---
@@ -160,16 +162,19 @@ pnpm dev
         └──→ ⑤ mvp-user-management ── admin 角色 + 用户 CRUD + 密码认证 ✓ 已完成
                 │
                 └──→ ⑥ mvp-integration ── 端到端测试 + MVP 演示文档 + README ✓ 已完成
+        │
+        └──→ ⑦ mvp-login-professional ─ 正式登录页（表单式）+ dev 登录页保留 ✓ 已完成
 ```
 
 | # | Change | 规模 | 核心交付 | 满足验收 |
 |---|--------|------|----------|----------|
-| 1 | `mvp-ui-upgrade` | M | antd 依赖 + Layout/Table/Tag/Form/Card 重构 + 精简 CSS | 视觉基础 |
-| 2 | `mvp-user-auth` | M | users 表 + seed 3 个预置账号 + auth API + 登录页 + AuthContext + 路由守卫 | #1, #2 |
-| 3 | `mvp-permission` | M | 服务端权限中间件 + 403 中文提示 + 前端动作可见性 | #3, #6, #7 |
-| 4 | `mvp-ticket-enrichment` | S | priority + dueDate + assignee 下拉 + 优先级排序 + 工单详情 Drawer | #4, #5 |
+| 1 | `mvp-ui-upgrade` | M | antd 依赖 + Layout/Table/Tag/Form/Card 重构 + 精简 CSS | 视觉基础 | ✓ |
+| 2 | `mvp-user-auth` | M | users 表 + seed 3 个预置账号 + auth API + 登录页 + AuthContext + 路由守卫 | #1, #2 | ✓ |
+| 3 | `mvp-permission` | M | 服务端权限中间件 + 403 中文提示 + 前端动作可见性 | #3, #6, #7 | ✓ |
+| 4 | `mvp-ticket-enrichment` | S | priority + dueDate + assignee 下拉 + 优先级排序 + 工单详情 Drawer | #4, #5 | ✓ |
 | 5 | `mvp-user-management` | M | admin 角色 + 用户 CRUD API + 密码字段 + 管理员工作台 | 身份体系完善 | ✓ |
 | 6 | `mvp-integration` | S | UI 美化 + bug 修复 + 共享常量 + 品牌标识 + 收尾 | #8 | ✓ |
+| 7 | `mvp-login-professional` | S | 正式登录页（用户名/密码表单 + 校验 + loading）+ dev 登录页保留 | 产品就绪 | ✓ |
 
 ### 更强 MVP 参考方向
 
