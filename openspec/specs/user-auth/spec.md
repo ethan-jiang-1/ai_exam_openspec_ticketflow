@@ -67,24 +67,27 @@ export interface User {
 
 ### Requirement: UA-004 内存 Session 存储
 
-`apps/server/src/lib/sessions.ts` SHALL 导出 `SessionStore` 类，提供以下方法：
+`apps/server/src/lib/sessions.ts` SHALL 导出 `SessionStore` 类（create / get / destroy / clear 方法），内存 Map 存储。Session ID SHALL 通过全局 `crypto.randomUUID()`（Web Crypto API）生成，SHALL NOT 依赖 Node.js 专属模块（如 `import from 'crypto'`），确保 Node.js 和 Cloudflare Workers 双运行时兼容。
 
-- `create(userId: string): string` — 生成随机 session ID，存储 `{ userId, createdAt }`，返回 session ID
-- `get(sessionId: string): { userId: string; createdAt: number } | undefined` — 按 ID 查询
-- `destroy(sessionId: string): void` — 删除指定 session
-- `clear(): void` — 清空所有 session（测试用）
+#### Scenario: create 生成合法 UUID session ID
 
-Session ID SHALL 使用 `crypto.randomUUID()` 生成。
+- **WHEN** 调用 `store.create('user-1')`
+- **THEN** SHALL 返回符合 UUID v4 格式的字符串，格式为 `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`
 
-#### Scenario: 创建并查询 session
+#### Scenario: get 检索已创建的 session
 
-- **WHEN** 调用 `create('user-123')`
-- **THEN** 返回一个 UUID 字符串，随后 `get(id)` SHALL 返回 `{ userId: 'user-123', createdAt: <number> }`
+- **WHEN** 先调用 `store.create('user-1')` 获取 id，再调用 `store.get(id)`
+- **THEN** SHALL 返回 `{ userId: 'user-1', createdAt: <number> }`
 
-#### Scenario: 删除 session
+#### Scenario: destroy 删除 session
 
-- **WHEN** 调用 `create('user-1')` 后调用 `destroy(sessionId)`
-- **THEN** `get(sessionId)` SHALL 返回 `undefined`
+- **WHEN** 先调用 `store.create('user-1')` 获取 id，再调用 `store.destroy(id)`，最后调用 `store.get(id)`
+- **THEN** SHALL 返回 `undefined`
+
+#### Scenario: clear 清空所有 session
+
+- **WHEN** 调用 `store.create('user-1')` 和 `store.create('user-2')` 后调用 `store.clear()`
+- **THEN** 所有后续 `store.get(...)` SHALL 返回 `undefined`
 
 ### Requirement: UA-005 Auth API — GET /api/auth/users
 
