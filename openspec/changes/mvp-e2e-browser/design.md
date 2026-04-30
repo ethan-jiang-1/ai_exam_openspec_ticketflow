@@ -57,8 +57,9 @@ Playwright config 通过 `process.env.E2E_BASE_URL` 读取，默认 `http://loca
 
 单文件 `playwright.config.ts`，不污染根目录。配置项：
 - `testDir: '.'`
-- `use.baseURL` 从 `E2E_BASE_URL` 环境变量读取
+- `use.baseURL` 从 `E2E_BASE_URL` 环境变量读取，默认 `http://localhost:5173`
 - `use.browserName: 'chromium'`
+- `timeout: 30000`（单个测试 30s 超时）
 - `retries: 0`（E2E 应可复现，失败了就是真失败）
 
 ### 7. 不引入 ORM seed for E2E
@@ -92,4 +93,3 @@ Playwright config 通过 `process.env.E2E_BASE_URL` 读取，默认 `http://loca
 
 1. **远程环境的 session cookie domain/path 是否与本地一致？** Cloudflare Workers 可能对 cookie 的 `Domain`/`Secure`/`SameSite` 做不同处理，Playwright 会捕获实际 Set-Cookie 头，第一个远程测试跑过就知道差异在哪——这正是引入 Playwright 的价值
 2. **是否需要在 CI 中运行 Playwright？** 当前 Cloudflare Workers Builds 不支持，但 GitHub Actions 可以。留到后续决定——当前 priority 是本地能用浏览器排查 + 手动测远程
-3. **Playwright 版本锁定策略？** `@playwright/test` 使用 `^` semver range 还是 exact version？建议 exact（`1.52.0`），因为 Playwright 版本与浏览器二进制强绑定

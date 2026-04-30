@@ -13,6 +13,7 @@
 - [ ] 2.1 创建 `scripts/e2e-diagnose.mjs`——使用 Playwright core API（`chromium.launch({ headless: false })`），从 `E2E_BASE_URL` 读取目标 URL，打开有头浏览器 [BA-001]
 - [ ] 2.2 诊断脚本中注册 `page.on('console')` 和 `page.on('request')` / `page.on('response')` 监听，实时输出到终端带 `[browser console]` 和 `[network]` 前缀 [BA-002]
 - [ ] 2.3 诊断脚本在 `Ctrl+C` 退出或关闭浏览器窗口时保存当前页面截图到 `tests/e2e/screenshots/diagnose-<timestamp>.png` [BA-002]
+- [ ] 2.4 诊断脚本处理目标不可达：输出明确错误信息（`连接失败: <url>` + 原因），浏览器保持打开不自动关闭 [BA-001]
 
 ## 3. 登录流程 E2E 测试 [BA-003]
 
@@ -45,5 +46,5 @@
 - [ ] 7.1 运行 `pnpm check` 确保不破坏现有 build/test/lint [DT-003]
 - [ ] 7.2 本地启动 `pnpm dev` → 运行 `E2E_BASE_URL=http://localhost:5173 pnpm e2e` → 全部通过 [BA-001]
 - [ ] 7.3 运行 `E2E_BASE_URL=https://ai-exam-openspec-ticketflow.ethan1-jiang.workers.dev pnpm e2e:remote` 验证远程环境 [BA-001]
-- [ ] 7.4 运行 `pnpm e2e:diagnose` 验证诊断模式——浏览器窗口打开、无报错、Ctrl+C 正常退出 [BA-001]
+- [ ] 7.4 运行 `E2E_BASE_URL=http://localhost:5173 pnpm e2e:diagnose` 验证诊断模式——浏览器窗口打开、无报错、Ctrl+C 正常退出 [BA-001]
 - [ ] 7.5 更新 `README.md` 和 `CLAUDE.md`：在命令表新增 `e2e` / `e2e:local` / `e2e:remote` / `e2e:diagnose` 说明
