@@ -179,9 +179,6 @@ Dashboard 依赖 ticket_history 的查询模式：
 - 批量操作（批量指派、批量关闭）
 - Dashboard 图表（antd Charts 柱状图/饼图，基于 ticket_history 历史数据）
 - 移动端响应式（antd Grid + 响应式断点）
-
-### MVP1 自然引出的方向
-
 - SLA 预警（ticket_history 已有状态时间戳，可计算各阶段 SLA 达标率）
 - 工单活动摘要（ticket_history 聚合 + comments 表 → 生成工单摘要视图）
 - 时效报表导出（ticket_history 数据完整，可导出 CSV 效率报告）
