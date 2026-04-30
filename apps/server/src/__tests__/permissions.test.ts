@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Role } from '@ticketflow/shared'
+import type { Context } from 'hono'
+import type { AuthVariables } from '../db/types'
 
 // These imports will fail until permissions.ts is created (TDD Red)
 import {
@@ -71,7 +73,7 @@ describe('getPermissionsForRoles', () => {
 
 describe('requirePermission middleware', () => {
   it('calls next when user has the required permission', async () => {
-    const next = vi.fn()
+    const next = vi.fn<() => Promise<void>>()
     const json = vi.fn().mockReturnThis()
     const c = {
       get: (key: string) => {
@@ -79,7 +81,7 @@ describe('requirePermission middleware', () => {
         return undefined
       },
       json,
-    } as any
+    } as unknown as Context<AuthVariables>
 
     const middleware = requirePermission('ticket:assign')
     await middleware(c, next)
@@ -89,7 +91,7 @@ describe('requirePermission middleware', () => {
   })
 
   it('returns 403 when user lacks the required permission', async () => {
-    const next = vi.fn()
+    const next = vi.fn<() => Promise<void>>()
     const json = vi.fn().mockReturnValue({ status: 403 })
     const c = {
       get: (key: string) => {
@@ -97,7 +99,7 @@ describe('requirePermission middleware', () => {
         return undefined
       },
       json,
-    } as any
+    } as unknown as Context<AuthVariables>
 
     const middleware = requirePermission('ticket:assign')
     await middleware(c, next)
