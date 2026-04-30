@@ -42,20 +42,24 @@
 
 ### 3. Dev 快捷下拉
 
-**决策：** 在 `LoginPage` 底部添加 `import.meta.env.DEV` 守卫的 antd `Select` 下拉。组件 mount 时调用 `getUsers()` 获取预置用户列表。选择用户后自动填入用户名字段，用户只需输入密码。
+**决策：** 在 `LoginPage` 底部添加 `import.meta.env.DEV` 守卫的 dev 下拉区域。该区域用浅色虚线边框包裹，顶部标注 "开发模式 (Dev Only)"，内嵌 antd `Select` 下拉。组件 mount 时调用 `getUsers()` 获取预置用户列表。选择用户后自动填入用户名字段，用户只需输入密码。
 
 ```tsx
 {import.meta.env.DEV && (
-  <Select
-    placeholder="快速选择用户 (Dev)"
-    options={users.map(u => ({ value: u.username, label: `${u.displayName} (${u.role})` }))}
-    onChange={(username) => form.setFieldsValue({ username })}
-  />
+  <div style={{ border: '1px dashed #d9d9d9', borderRadius: 8, padding: 16 }}>
+    <div style={{ color: '#999', fontSize: 12, marginBottom: 8 }}>开发模式 (Dev Only)</div>
+    <Select
+      placeholder="快速选择用户 (Dev)"
+      options={users.map(u => ({ value: u.username, label: `${u.displayName} (${u.role})` }))}
+      onChange={(username) => form.setFieldsValue({ username })}
+    />
+  </div>
 )}
 ```
 
 **理由：**
-- `import.meta.env.DEV` 是 Vite 编译时常量，生产构建时整个 if 块被 tree-shake 移除，不增加 bundle 体积
+- 虚线边框明确视觉边界，标注文字说明这是开发专属功能，避免误以为是生产功能
+- `import.meta.env.DEV` 是 Vite 编译时常量，生产构建时整个容器（边框+标注+下拉）被 tree-shake 移除
 - 不需要额外的环境变量或配置
 - `getUsers()` 失败时 Select 为空（options 为空数组），不影响表单正常使用
 

@@ -14,7 +14,7 @@
 - 登录按钮 `Button type="primary"` block，提交时显示 loading
 - Enter 键行为：用户名字段按 Enter → 焦点移至密码框；密码字段按 Enter → 提交表单
 - 表单校验：用户名和密码均为必填（`rules: [{ required: true, message: '请输入用户名/密码' }]`）
-- 开发环境（`import.meta.env.DEV`）底部显示 `Select` 快捷下拉，选择预置用户后自动填入用户名
+- 开发环境（`import.meta.env.DEV`）底部显示虚线边框标注区域，内含 `Select` 快捷下拉，选择预置用户后自动填入用户名
 
 `LoginPageDev`（调试登录页）：
 - 保留当前卡片式 UI：4 张 antd Card，每张对应一个预置用户
@@ -44,7 +44,7 @@
 
 #### Scenario: 正式登录页 Dev 快捷下拉
 
-- **WHEN** 在开发环境访问 `/login`，在底部下拉中选择 "提交者 (submitter)"
+- **WHEN** 在开发环境访问 `/login`，在底部虚线边框区域的下拉中选择 "提交者 (submitter)"
 - **THEN** 用户名输入框 SHALL 自动填入 "submitter"
 
 #### Scenario: 调试登录页展示用户卡片与密码输入框

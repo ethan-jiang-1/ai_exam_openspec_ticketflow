@@ -72,20 +72,22 @@
 
 ### Requirement: LP-004 Dev 快捷下拉
 
-`LoginPage` SHALL 在开发环境下（`import.meta.env.DEV === true`）底部显示 antd `Select` 下拉：
+`LoginPage` SHALL 在开发环境下（`import.meta.env.DEV === true`）底部显示一个视觉上明确标注为"开发模式"的区域，该区域 SHALL 包含：
 
-- placeholder: "快速选择用户 (Dev)"
+- 浅色虚线边框容器（`border: '1px dashed #d9d9d9'`，`borderRadius: 8`，`padding: 16`）
+- 容器顶部文字标注 "开发模式 (Dev Only)"，灰色小字（`color: '#999'`，`fontSize: 12`）
+- 容器内 antd `Select` 下拉，placeholder: "快速选择用户 (Dev)"
 - 数据来源：mount 时调用 `getUsers()` API
 - 每个选项 label 格式：`{displayName} ({role})`，value 为 `{username}`
 - 选择用户后 SHALL 调用 `form.setFieldsValue({ username: selectedUsername })` 填入用户名字段
 - 仅填入用户名，不填入密码
 
-`import.meta.env.DEV` 为 false 时（生产构建），此下拉 UI 及其对 `getUsers` 的调用 SHALL 被 tree-shaken 移除，不在 bundle 中出现。
+`import.meta.env.DEV` 为 false 时（生产构建），整个容器（含标注和下拉）SHALL 被 tree-shaken 移除，不在 bundle 中出现。
 
-#### Scenario: Dev 模式下显示下拉
+#### Scenario: Dev 模式下显示带边框的下拉区域
 
 - **WHEN** 在开发环境访问 `/login`
-- **THEN** 页面底部 SHALL 显示 "快速选择用户 (Dev)" 下拉
+- **THEN** 页面底部 SHALL 显示虚线边框容器，顶部标注 "开发模式 (Dev Only)"，容器内包含 "快速选择用户 (Dev)" 下拉
 
 #### Scenario: 选择预置用户填入用户名
 

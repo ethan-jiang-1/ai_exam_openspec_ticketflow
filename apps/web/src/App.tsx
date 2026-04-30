@@ -3,6 +3,7 @@ import { Spin } from 'antd'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
+import LoginPageDev from './pages/LoginPageDev'
 import SubmitterWorkbench from './pages/SubmitterWorkbench'
 import DispatcherWorkbench from './pages/DispatcherWorkbench'
 import CompleterWorkbench from './pages/CompleterWorkbench'
@@ -41,6 +42,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/login-dev" element={<LoginPageDev />} />
       <Route path="/workbench" element={<ProtectedLayout />}>
         <Route path="submitter" element={<WorkbenchGuard role="submitter"><SubmitterWorkbench /></WorkbenchGuard>} />
         <Route path="dispatcher" element={<WorkbenchGuard role="dispatcher"><DispatcherWorkbench /></WorkbenchGuard>} />
