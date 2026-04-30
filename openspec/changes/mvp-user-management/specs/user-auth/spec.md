@@ -175,6 +175,22 @@ SHALL NOT 依赖 Node.js 专属模块（如 `import from 'crypto'`），确保 N
 - **WHEN** submitter 角色用户发送 `GET /api/admin/users`
 - **THEN** 响应状态码 SHALL 为 `403`
 
+### Requirement: UA-028 Session 中间件排除 passwordHash
+
+`apps/server/src/middleware/auth.ts` 的 `sessionMiddleware` SHALL 在查询 users 表时使用 Drizzle column 选择（`.select({ ... })`）显式排除 `passwordHash` 列，或将查询结果解构时丢弃 `passwordHash`，确保 `c.set('user', ...)` 设置的对象不包含 passwordHash 字段。
+
+`GET /api/auth/me` handler 在返回 `c.get('user')` 时 SHALL 显式选择返回字段（id / username / displayName / role），不得直接展开 `c.get('user')` 对象。
+
+#### Scenario: sessionMiddleware 不暴露 passwordHash
+
+- **WHEN** 用户携带有效 session cookie 请求任意受保护路由
+- **THEN** `c.get('user')` 对象 SHALL 包含 id / username / displayName / role / createdAt 字段，SHALL NOT 包含 passwordHash 字段
+
+#### Scenario: GET /api/auth/me 不暴露 passwordHash
+
+- **WHEN** 已登录用户发送 `GET /api/auth/me`
+- **THEN** 响应 body SHALL 包含 id / username / displayName / role 字段，SHALL NOT 包含 passwordHash 字段
+
 ## MODIFIED Requirements
 
 ### Requirement: UA-001 users 表定义
@@ -368,19 +384,3 @@ interface AuthContextValue {
 
 - **WHEN** 分别查询 `ROLE_PERMISSIONS['submitter']`、`ROLE_PERMISSIONS['dispatcher']`、`ROLE_PERMISSIONS['completer']`
 - **THEN** 均不包含 `'user:manage'`
-
-### Requirement: UA-028 Session 中间件排除 passwordHash
-
-`apps/server/src/middleware/auth.ts` 的 `sessionMiddleware` SHALL 在查询 users 表时使用 Drizzle column 选择（`.select({ ... })`）显式排除 `passwordHash` 列，或将查询结果解构时丢弃 `passwordHash`，确保 `c.set('user', ...)` 设置的对象不包含 passwordHash 字段。
-
-`GET /api/auth/me` handler 在返回 `c.get('user')` 时 SHALL 显式选择返回字段（id / username / displayName / role），不得直接展开 `c.get('user')` 对象。
-
-#### Scenario: sessionMiddleware 不暴露 passwordHash
-
-- **WHEN** 用户携带有效 session cookie 请求任意受保护路由
-- **THEN** `c.get('user')` 对象 SHALL 包含 id / username / displayName / role / createdAt 字段，SHALL NOT 包含 passwordHash 字段
-
-#### Scenario: GET /api/auth/me 不暴露 passwordHash
-
-- **WHEN** 已登录用户发送 `GET /api/auth/me`
-- **THEN** 响应 body SHALL 包含 id / username / displayName / role 字段，SHALL NOT 包含 passwordHash 字段
