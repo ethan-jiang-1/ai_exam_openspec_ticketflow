@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: UA-004 内存 Session 存储（含 TTL）
+### Requirement: UA-004 内存 Session 存储
 
 `apps/server/src/lib/sessions.ts` SHALL 导出 `SessionStore` 类，构造时接受可选 `ttlMs` 参数（默认 86,400,000，即 24h）。
 
@@ -80,7 +80,7 @@ Session ID SHALL 通过 `crypto.randomUUID()` 生成。
 - **WHEN** 发送 `POST /api/auth/login`，body 为 `{ username: "submitter" }`
 - **THEN** SHALL 返回 400，body 为 `{ error: "password is required" }`
 
-### Requirement: UA-009 Auth 中间件（含 session 过期处理）
+### Requirement: UA-009 Auth 中间件
 
 `apps/server/src/middleware/auth.ts` SHALL 导出两个中间件：
 
