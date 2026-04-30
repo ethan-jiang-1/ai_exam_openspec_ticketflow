@@ -149,9 +149,11 @@ pnpm dev
 │
 ├──→ ③ mvp-permission ──── 权限中间件（Dashboard 推迟到 MVP1） ✓ 已完成
 │
-└──→ ④ mvp-ticket-enrichment ─ priority/dueDate + 工单详情 Drawer（视觉亮点）
+└──→ ④ mvp-ticket-enrichment ─ priority/dueDate + assignee 下拉 + 工单详情 Drawer
         │
-        └──→ ⑤ mvp-integration ── 端到端测试 + MVP 演示文档 + README
+        └──→ ⑤ mvp-user-management ── admin 角色 + 用户 CRUD + 密码认证
+                │
+                └──→ ⑥ mvp-integration ── 端到端测试 + MVP 演示文档 + README
 ```
 
 | # | Change | 规模 | 核心交付 | 满足验收 |
@@ -160,7 +162,8 @@ pnpm dev
 | 2 | `mvp-user-auth` | M | users 表 + seed 3 个预置账号 + auth API + 登录页 + AuthContext + 路由守卫 | #1, #2 |
 | 3 | `mvp-permission` | M | 服务端权限中间件 + 403 中文提示 + 前端动作可见性 | #3, #6, #7 |
 | 4 | `mvp-ticket-enrichment` | S | priority + dueDate + assignee 下拉 + 优先级排序 + 工单详情 Drawer | #4, #5 |
-| 5 | `mvp-integration` | S | 端到端集成测试 + 权限测试 + README MVP 演示步骤 | #8 |
+| 5 | `mvp-user-management` | M | admin 角色 + 用户 CRUD API + 密码字段 + 管理员工作台 | 身份体系完善 |
+| 6 | `mvp-integration` | S | 端到端集成测试 + 权限测试 + README MVP 演示步骤 | #8 |
 
 ### 更强 MVP 参考方向
 
