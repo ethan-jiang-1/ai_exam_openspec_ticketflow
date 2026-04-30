@@ -5,39 +5,45 @@ import { sessionStore } from '../lib/sessions'
 
 const { app, db } = createTestApp()
 
-const testSubmitter = {
-  id: 'u-test-00000000-0000-0000-000000000001',
-  username: 'submitter',
-  displayName: 'Test Submitter',
-  role: 'submitter',
-  createdAt: new Date().toISOString(),
+const testUsers = [
+  { id: 'u-test-00000000-0000-0000-000000000001', username: 'submitter', displayName: 'Test Submitter', role: 'submitter' as const, createdAt: new Date().toISOString() },
+  { id: 'u-test-00000000-0000-0000-000000000002', username: 'dispatcher', displayName: 'Test Dispatcher', role: 'dispatcher' as const, createdAt: new Date().toISOString() },
+  { id: 'u-test-00000000-0000-0000-000000000003', username: 'completer', displayName: 'Test Completer', role: 'completer' as const, createdAt: new Date().toISOString() },
+]
+
+async function loginAs(username: string): Promise<string> {
+  const res = await app.request('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  })
+  return res.headers.get('set-cookie')!
 }
 
 describe('Tickets API', () => {
-  let cookie: string
+  let submitterCookie: string
+  let dispatcherCookie: string
+  let completerCookie: string
 
   beforeEach(async () => {
     sessionStore.clear()
     await db.delete(tickets)
     await db.delete(users)
-    await db.insert(users).values(testSubmitter)
-
-    // Login to get session cookie
-    const loginRes = await app.request('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'submitter' }),
-    })
-    cookie = loginRes.headers.get('set-cookie')!
+    await db.insert(users).values(testUsers)
+    submitterCookie = await loginAs('submitter')
+    dispatcherCookie = await loginAs('dispatcher')
+    completerCookie = await loginAs('completer')
   })
 
-  const headers = () => ({ Cookie: cookie, 'Content-Type': 'application/json' })
+  const submitterHeaders = () => ({ Cookie: submitterCookie, 'Content-Type': 'application/json' })
+  const dispatcherHeaders = () => ({ Cookie: dispatcherCookie, 'Content-Type': 'application/json' })
+  const completerHeaders = () => ({ Cookie: completerCookie, 'Content-Type': 'application/json' })
 
   const createTicket = async (overrides?: Record<string, string>) => {
     const body = { title: 'Test ticket', description: 'Test description', ...overrides }
     return app.request('/api/tickets', {
       method: 'POST',
-      headers: headers(),
+      headers: submitterHeaders(),
       body: JSON.stringify(body),
     })
   }
@@ -87,7 +93,7 @@ describe('Tickets API', () => {
 
   describe('GET /api/tickets', () => {
     it('should return an empty array', async () => {
-      const res = await app.request('/api/tickets', { headers: headers() })
+      const res = await app.request('/api/tickets', { headers: submitterHeaders() })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body).toEqual([])
@@ -96,7 +102,7 @@ describe('Tickets API', () => {
     it('should return all tickets', async () => {
       await createTicket({ title: 'Ticket 1' })
       await createTicket({ title: 'Ticket 2' })
-      const res = await app.request('/api/tickets', { headers: headers() })
+      const res = await app.request('/api/tickets', { headers: submitterHeaders() })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body).toHaveLength(2)
@@ -106,7 +112,7 @@ describe('Tickets API', () => {
   describe('GET /api/tickets/:id', () => {
     it('should return a ticket by ID', async () => {
       const created = await (await createTicket()).json()
-      const res = await app.request(`/api/tickets/${created.id}`, { headers: headers() })
+      const res = await app.request(`/api/tickets/${created.id}`, { headers: submitterHeaders() })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.id).toBe(created.id)
@@ -114,7 +120,7 @@ describe('Tickets API', () => {
     })
 
     it('should return 404 for non-existent ID', async () => {
-      const res = await app.request('/api/tickets/non-existent-id', { headers: headers() })
+      const res = await app.request('/api/tickets/non-existent-id', { headers: submitterHeaders() })
       expect(res.status).toBe(404)
       const body = await res.json()
       expect(body).toHaveProperty('error')
@@ -126,7 +132,7 @@ describe('Tickets API', () => {
       const created = await (await createTicket()).json()
       const res = await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       expect(res.status).toBe(200)
@@ -140,12 +146,12 @@ describe('Tickets API', () => {
       const created = await (await createTicket()).json()
       await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       const res = await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'other' }),
       })
       expect(res.status).toBe(400)
@@ -156,7 +162,7 @@ describe('Tickets API', () => {
     it('should return 404 for non-existent ticket', async () => {
       const res = await app.request('/api/tickets/non-existent-id/assign', {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       expect(res.status).toBe(404)
@@ -168,12 +174,12 @@ describe('Tickets API', () => {
       const created = await (await createTicket()).json()
       await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       const res = await app.request(`/api/tickets/${created.id}/start`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -184,7 +190,7 @@ describe('Tickets API', () => {
       const created = await (await createTicket()).json()
       const res = await app.request(`/api/tickets/${created.id}/start`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       expect(res.status).toBe(400)
     })
@@ -192,7 +198,7 @@ describe('Tickets API', () => {
     it('should return 404 for non-existent ticket', async () => {
       const res = await app.request('/api/tickets/non-existent-id/start', {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       expect(res.status).toBe(404)
     })
@@ -203,16 +209,16 @@ describe('Tickets API', () => {
       const created = await (await createTicket()).json()
       await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       await app.request(`/api/tickets/${created.id}/start`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       const res = await app.request(`/api/tickets/${created.id}/complete`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -223,12 +229,12 @@ describe('Tickets API', () => {
       const created = await (await createTicket()).json()
       await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: dispatcherHeaders(),
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       const res = await app.request(`/api/tickets/${created.id}/complete`, {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       expect(res.status).toBe(400)
     })
@@ -236,7 +242,7 @@ describe('Tickets API', () => {
     it('should return 404 for non-existent ticket', async () => {
       const res = await app.request('/api/tickets/non-existent-id/complete', {
         method: 'PATCH',
-        headers: headers(),
+        headers: completerHeaders(),
       })
       expect(res.status).toBe(404)
     })
@@ -260,6 +266,73 @@ describe('Tickets API', () => {
         })
         expect(res.status).toBe(401)
       }
+    })
+  })
+
+  describe('Permission guard (403)', () => {
+    it('submitter cannot assign tickets', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      expect(res.status).toBe(403)
+      const body = await res.json()
+      expect(body).toEqual({ error: '权限不足' })
+    })
+
+    it('submitter cannot start tickets', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}/start`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+      })
+      expect(res.status).toBe(403)
+      const body = await res.json()
+      expect(body).toEqual({ error: '权限不足' })
+    })
+
+    it('dispatcher cannot create tickets', async () => {
+      const res = await app.request('/api/tickets', {
+        method: 'POST',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ title: 'Hack', description: 'Should fail' }),
+      })
+      expect(res.status).toBe(403)
+      const body = await res.json()
+      expect(body).toEqual({ error: '权限不足' })
+    })
+
+    it('dispatcher cannot complete tickets', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      await app.request(`/api/tickets/${created.id}/start`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      const res = await app.request(`/api/tickets/${created.id}/complete`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+      })
+      expect(res.status).toBe(403)
+      const body = await res.json()
+      expect(body).toEqual({ error: '权限不足' })
+    })
+
+    it('completer cannot create tickets', async () => {
+      const res = await app.request('/api/tickets', {
+        method: 'POST',
+        headers: completerHeaders(),
+        body: JSON.stringify({ title: 'Hack', description: 'Should fail' }),
+      })
+      expect(res.status).toBe(403)
+      const body = await res.json()
+      expect(body).toEqual({ error: '权限不足' })
     })
   })
 })

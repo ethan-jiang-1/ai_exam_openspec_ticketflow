@@ -4,6 +4,7 @@ import { tickets } from '../db/schema'
 import type { TicketStatus } from '@ticketflow/shared'
 import type { AuthVariables } from '../db/types'
 import { requireAuth } from '../middleware/auth'
+import { requirePermission } from '../lib/permissions'
 
 const ticketsRoute = new Hono<AuthVariables>()
 
@@ -26,7 +27,7 @@ ticketsRoute.get('/:id', requireAuth, async (c) => {
 })
 
 // POST /api/tickets
-ticketsRoute.post('/', requireAuth, async (c) => {
+ticketsRoute.post('/', requireAuth, requirePermission('ticket:create'), async (c) => {
   const db = c.get('db')
   const user = c.get('user')!
   const body = await c.req.json<{ title?: string; description?: string }>()
@@ -58,7 +59,7 @@ ticketsRoute.post('/', requireAuth, async (c) => {
 })
 
 // PATCH /api/tickets/:id/assign
-ticketsRoute.patch('/:id/assign', requireAuth, async (c) => {
+ticketsRoute.patch('/:id/assign', requireAuth, requirePermission('ticket:assign'), async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
@@ -84,7 +85,7 @@ ticketsRoute.patch('/:id/assign', requireAuth, async (c) => {
 })
 
 // PATCH /api/tickets/:id/start
-ticketsRoute.patch('/:id/start', requireAuth, async (c) => {
+ticketsRoute.patch('/:id/start', requireAuth, requirePermission('ticket:start'), async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))
@@ -105,7 +106,7 @@ ticketsRoute.patch('/:id/start', requireAuth, async (c) => {
 })
 
 // PATCH /api/tickets/:id/complete
-ticketsRoute.patch('/:id/complete', requireAuth, async (c) => {
+ticketsRoute.patch('/:id/complete', requireAuth, requirePermission('ticket:complete'), async (c) => {
   const db = c.get('db')
   const id = c.req.param('id')
   const existing = await db.select().from(tickets).where(eq(tickets.id, id))

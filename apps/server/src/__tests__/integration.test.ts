@@ -5,38 +5,41 @@ import { sessionStore } from '../lib/sessions'
 
 const { app, db } = createTestApp()
 
-const testSubmitter = {
-  id: 'u-int-00000000-0000-0000-000000000001',
-  username: 'submitter',
-  displayName: 'Integration Submitter',
-  role: 'submitter',
-  createdAt: new Date().toISOString(),
+const testUsers = [
+  { id: 'u-int-00000000-0000-0000-000000000001', username: 'submitter', displayName: 'Integration Submitter', role: 'submitter' as const, createdAt: new Date().toISOString() },
+  { id: 'u-int-00000000-0000-0000-000000000002', username: 'dispatcher', displayName: 'Integration Dispatcher', role: 'dispatcher' as const, createdAt: new Date().toISOString() },
+  { id: 'u-int-00000000-0000-0000-000000000003', username: 'completer', displayName: 'Integration Completer', role: 'completer' as const, createdAt: new Date().toISOString() },
+]
+
+async function loginAs(username: string): Promise<string> {
+  const res = await app.request('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  })
+  return res.headers.get('set-cookie')!
 }
 
 describe('Integration: full ticket lifecycle', () => {
-  let cookie: string
+  let submitterH: Record<string, string>
+  let dispatcherH: Record<string, string>
+  let completerH: Record<string, string>
 
   beforeEach(async () => {
     sessionStore.clear()
     await db.delete(tickets)
     await db.delete(users)
-    await db.insert(users).values(testSubmitter)
-
-    const loginRes = await app.request('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'submitter' }),
-    })
-    cookie = loginRes.headers.get('set-cookie')!
+    await db.insert(users).values(testUsers)
+    submitterH = { Cookie: await loginAs('submitter'), 'Content-Type': 'application/json' }
+    dispatcherH = { Cookie: await loginAs('dispatcher'), 'Content-Type': 'application/json' }
+    completerH = { Cookie: await loginAs('completer'), 'Content-Type': 'application/json' }
   })
 
   it('should complete the full create → assign → start → complete flow', async () => {
-    const h = { Cookie: cookie, 'Content-Type': 'application/json' }
-
-    // Step 1: Create ticket
+    // Step 1: Create ticket (as submitter)
     const createRes = await app.request('/api/tickets', {
       method: 'POST',
-      headers: h,
+      headers: submitterH,
       body: JSON.stringify({ title: 'Integration test', description: 'Full flow' }),
     })
     expect(createRes.status).toBe(201)
@@ -45,10 +48,10 @@ describe('Integration: full ticket lifecycle', () => {
     expect(created.createdBy).toBe('submitter')
     expect(created.assignedTo).toBeNull()
 
-    // Step 2: Assign ticket
+    // Step 2: Assign ticket (as dispatcher)
     const assignRes = await app.request(`/api/tickets/${created.id}/assign`, {
       method: 'PATCH',
-      headers: h,
+      headers: dispatcherH,
       body: JSON.stringify({ assignedTo: 'completer' }),
     })
     expect(assignRes.status).toBe(200)
@@ -56,19 +59,19 @@ describe('Integration: full ticket lifecycle', () => {
     expect(assigned.status).toBe('assigned')
     expect(assigned.assignedTo).toBe('completer')
 
-    // Step 3: Start ticket
+    // Step 3: Start ticket (as completer)
     const startRes = await app.request(`/api/tickets/${created.id}/start`, {
       method: 'PATCH',
-      headers: h,
+      headers: completerH,
     })
     expect(startRes.status).toBe(200)
     const started = await startRes.json()
     expect(started.status).toBe('in_progress')
 
-    // Step 4: Complete ticket
+    // Step 4: Complete ticket (as completer)
     const completeRes = await app.request(`/api/tickets/${created.id}/complete`, {
       method: 'PATCH',
-      headers: h,
+      headers: completerH,
     })
     expect(completeRes.status).toBe(200)
     const completed = await completeRes.json()
