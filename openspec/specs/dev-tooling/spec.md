@@ -28,12 +28,17 @@
 
 ### Requirement: DT-003 Vitest 测试框架
 
-项目 SHALL 配置 Vitest 测试框架，`apps/web`、`apps/server` 和 `packages/shared` 各自有独立的 `vitest.config.ts`。
+项目 SHALL 配置 Vitest 测试框架用于单元测试、组件测试和 API 集成测试，`apps/web`、`apps/server` 和 `packages/shared` 各自有独立的 `vitest.config.ts`。浏览器级 E2E 测试由 Playwright 负责，不在 vitest 范围内。
 
 #### Scenario: 运行所有测试
 
 - **WHEN** 在根目录执行 `pnpm test`
 - **THEN** Vitest SHALL 运行 `apps/web`、`apps/server` 和 `packages/shared` 的所有测试用例，输出通过/失败计数，退出码反映测试结果
+
+#### Scenario: `pnpm test` 不包含浏览器 E2E
+
+- **WHEN** 在根目录执行 `pnpm test`
+- **THEN** Vitest SHALL NOT 运行 `tests/e2e/` 目录下的 Playwright 测试
 
 #### Scenario: 单个工作区运行测试
 

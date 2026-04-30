@@ -96,7 +96,7 @@ context: |
     CF  = cloudflare-deploy
     US  = ui-system
     UA  = user-auth
-  BA  = browser-automation
+    BA  = browser-automation
 
   Spec 编写约定:
     - 每个 Requirement 必须带 ID: ### Requirement: {CAP}-{SEQ} {名称}
