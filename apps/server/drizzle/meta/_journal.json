@@ -43,6 +43,34 @@
       "when": 1777453192513,
       "tag": "0005_add_password_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1746057600000,
+      "tag": "0006_create_ticket_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1746057600000,
+      "tag": "0007_ticket_history_ticket_idx",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1746057600000,
+      "tag": "0008_ticket_history_action_idx",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1746057600000,
+      "tag": "0009_backfill_ticket_history",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestApp } from './helpers'
-import { tickets, users } from '../db/schema'
+import { tickets, ticketHistory, users } from '../db/schema'
 import { sessionStore } from '../lib/sessions'
 import { hashPassword } from '../lib/password'
 
@@ -33,6 +34,7 @@ describe('Tickets API', () => {
 
   beforeEach(async () => {
     sessionStore.clear()
+    await db.delete(ticketHistory)
     await db.delete(tickets)
     await db.delete(users)
     await seedUser('u-test-00000000-0000-0000-000000000001', 'submitter', 'Test Submitter', 'submitter', 'testpass')
@@ -180,7 +182,8 @@ describe('Tickets API', () => {
       expect(body.updatedAt).not.toBe(body.createdAt)
     })
 
-    it('should reject assign for non-submitted status', async () => {
+    it('should reassign an assigned ticket to a different user', async () => {
+      await seedUser('u-test-00000000-0000-0000-000000000004', 'completer2', 'Test Completer2', 'completer', 'testpass')
       const created = await (await createTicket()).json()
       await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
@@ -190,7 +193,29 @@ describe('Tickets API', () => {
       const res = await app.request(`/api/tickets/${created.id}/assign`, {
         method: 'PATCH',
         headers: dispatcherHeaders(),
-        body: JSON.stringify({ assignedTo: 'other' }),
+        body: JSON.stringify({ assignedTo: 'completer2' }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.status).toBe('assigned')
+      expect(body.assignedTo).toBe('completer2')
+    })
+
+    it('should reject assign for in_progress status', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      await app.request(`/api/tickets/${created.id}/start`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      const res = await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
       })
       expect(res.status).toBe(400)
       const body = await res.json()
@@ -216,6 +241,23 @@ describe('Tickets API', () => {
       expect(res.status).toBe(400)
       const body = await res.json()
       expect(body).toEqual({ error: '指派目标用户不存在' })
+    })
+
+    it('should reject assigning to same user with 400', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      const res = await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body).toEqual({ error: '工单已指派给该用户' })
     })
   })
 
@@ -298,11 +340,171 @@ describe('Tickets API', () => {
     })
   })
 
+  describe('ticket_history writes', () => {
+    it('should write created event on POST /api/tickets', async () => {
+      const res = await createTicket()
+      const ticket = await res.json()
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, ticket.id))
+      expect(history).toHaveLength(1)
+      expect(history[0].action).toBe('created')
+      expect(history[0].actor).toBe('submitter')
+      expect(history[0].fromStatus).toBeNull()
+      expect(history[0].toStatus).toBe('submitted')
+    })
+
+    it('should write assigned event on first assign', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const assignEntry = history.find((h) => h.action === 'assigned')
+      expect(assignEntry).toBeDefined()
+      expect(assignEntry!.actor).toBe('dispatcher')
+      expect(assignEntry!.fromStatus).toBe('submitted')
+      expect(assignEntry!.toStatus).toBe('assigned')
+    })
+
+    it('should write reassigned event on reassign', async () => {
+      await seedUser('u-test-00000000-0000-0000-000000000004', 'completer2', 'Test Completer2', 'completer', 'testpass')
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer2' }),
+      })
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const reassignEntry = history.find((h) => h.action === 'reassigned')
+      expect(reassignEntry).toBeDefined()
+      expect(reassignEntry!.fromStatus).toBe('assigned')
+      expect(reassignEntry!.toStatus).toBe('assigned')
+      const details = JSON.parse(reassignEntry!.details!)
+      expect(details.assignee).toBe('completer2')
+      expect(details.prevAssignee).toBe('completer')
+    })
+
+    it('should write started event on start', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      await app.request(`/api/tickets/${created.id}/start`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const startEntry = history.find((h) => h.action === 'started')
+      expect(startEntry).toBeDefined()
+      expect(startEntry!.actor).toBe('completer')
+      expect(startEntry!.fromStatus).toBe('assigned')
+      expect(startEntry!.toStatus).toBe('in_progress')
+    })
+
+    it('should write completed event on complete', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      await app.request(`/api/tickets/${created.id}/start`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      await app.request(`/api/tickets/${created.id}/complete`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const completeEntry = history.find((h) => h.action === 'completed')
+      expect(completeEntry).toBeDefined()
+      expect(completeEntry!.actor).toBe('completer')
+      expect(completeEntry!.fromStatus).toBe('in_progress')
+      expect(completeEntry!.toStatus).toBe('completed')
+    })
+
+    it('should NOT write history on failed operation', async () => {
+      const res = await app.request('/api/tickets', {
+        method: 'POST',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: '' }),
+      })
+      expect(res.status).toBe(400)
+      const allHistory = await db.select().from(ticketHistory)
+      expect(allHistory).toHaveLength(0)
+    })
+  })
+
+  describe('GET /api/tickets/:id/history', () => {
+    it('should return full timeline in createdAt ascending order', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      await app.request(`/api/tickets/${created.id}/start`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      await app.request(`/api/tickets/${created.id}/complete`, {
+        method: 'PATCH',
+        headers: completerHeaders(),
+      })
+      const res = await app.request(`/api/tickets/${created.id}/history`, {
+        headers: submitterHeaders(),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(4)
+      expect(body[0].action).toBe('created')
+      expect(body[3].action).toBe('completed')
+      // Check ascending order
+      for (let i = 1; i < body.length; i++) {
+        expect(new Date(body[i].createdAt).getTime()).toBeGreaterThanOrEqual(new Date(body[i - 1].createdAt).getTime())
+      }
+    })
+
+    it('should return empty array when ticket has no history', async () => {
+      const created = await (await createTicket()).json()
+      // Delete all history to simulate empty case
+      await db.delete(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const res = await app.request(`/api/tickets/${created.id}/history`, {
+        headers: submitterHeaders(),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toEqual([])
+    })
+
+    it('should return 404 for non-existent ticket', async () => {
+      const res = await app.request('/api/tickets/non-existent-id/history', {
+        headers: submitterHeaders(),
+      })
+      expect(res.status).toBe(404)
+    })
+
+    it('should return 401 without session', async () => {
+      const res = await app.request('/api/tickets/some-id/history')
+      expect(res.status).toBe(401)
+    })
+  })
+
   describe('Auth guard', () => {
     it('should return 401 for all ticket endpoints without session', async () => {
       const endpoints = [
         { method: 'GET', path: '/api/tickets' },
         { method: 'GET', path: '/api/tickets/some-id' },
+        { method: 'GET', path: '/api/tickets/some-id/history' },
         { method: 'POST', path: '/api/tickets' },
         { method: 'PATCH', path: '/api/tickets/some-id/assign' },
         { method: 'PATCH', path: '/api/tickets/some-id/start' },

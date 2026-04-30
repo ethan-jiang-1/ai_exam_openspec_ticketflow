@@ -447,3 +447,103 @@ describe('Dispatcher assignee dropdown', () => {
     expect(screen.queryByText('调度者')).not.toBeInTheDocument()
   })
 })
+
+describe('Dispatcher reassign', () => {
+  const mockUsersWithTwoCompleters = [
+    { username: 'submitter', displayName: '提交者', role: 'submitter', id: 'u1', createdAt: '2026-01-01T00:00:00Z' },
+    { username: 'dispatcher', displayName: '调度者', role: 'dispatcher', id: 'u2', createdAt: '2026-01-01T00:00:00Z' },
+    { username: 'completer', displayName: '完成者', role: 'completer', id: 'u3', createdAt: '2026-01-01T00:00:00Z' },
+    { username: 'completer2', displayName: '完成者2', role: 'completer', id: 'u4', createdAt: '2026-01-01T00:00:00Z' },
+  ]
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsersWithTwoCompleters) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/assign') && init?.method === 'PATCH') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+  })
+
+  it('shows reassign Select and Button for assigned tickets', async () => {
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket B')).toBeInTheDocument()
+    })
+    // Ticket B and E are assigned, should have "重新指派" buttons
+    const reassignButtons = screen.getAllByText('重新指派')
+    expect(reassignButtons.length).toBeGreaterThanOrEqual(2)
+    // Should not have old plain text
+    expect(screen.queryByText('已指派给 completer')).not.toBeInTheDocument()
+  })
+
+  it('refreshes list after successful reassign', async () => {
+    let assignCalled = false
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsersWithTwoCompleters) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/assign') && init?.method === 'PATCH') {
+        assignCalled = true
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) } as Response)
+      }
+      // Return fresh tickets after reassign
+      if (assignCalled && urlStr === '/api/tickets') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockTickets.map((t) => t.id === '2' ? { ...t, assignedTo: 'completer2' } : t)),
+        } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket B')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getAllByText('重新指派')[0])
+    await waitFor(() => {
+      expect(assignCalled).toBe(true)
+    })
+  })
+
+  it('shows error when reassigning to same user', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsersWithTwoCompleters) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/assign') && init?.method === 'PATCH') {
+        return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: '工单已指派给该用户' }) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket B')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getAllByText('重新指派')[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('工单已指派给该用户')).toBeInTheDocument()
+    })
+  })
+})

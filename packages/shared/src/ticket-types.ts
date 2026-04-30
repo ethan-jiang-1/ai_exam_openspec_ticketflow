@@ -81,6 +81,21 @@ export const ROLE_COLORS: Record<Role, string> = {
   admin: '#d97706',
 }
 
+// --- TicketHistory ---
+
+export type TicketHistoryAction = 'created' | 'assigned' | 'reassigned' | 'started' | 'completed'
+
+export interface TicketHistoryEvent {
+  id: string
+  ticketId: string
+  action: TicketHistoryAction
+  actor: string
+  fromStatus: string | null
+  toStatus: string
+  details: string | null
+  createdAt: string
+}
+
 // --- Ticket ---
 
 export interface Ticket {

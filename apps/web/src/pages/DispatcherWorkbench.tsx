@@ -103,7 +103,19 @@ export default function DispatcherWorkbench() {
           )
         }
         if (record.status === 'assigned') {
-          return <span>已指派给 {record.assignedTo}</span>
+          return (
+            <>
+              <Select
+                value={assignValues[record.id] || record.assignedTo || assignees[0]?.username}
+                style={{ width: 120, marginRight: 8 }}
+                onChange={(v) => setAssignValues((prev) => ({ ...prev, [record.id]: v }))}
+                options={assignees.map((a) => ({ value: a.username, label: a.displayName }))}
+              />
+              <Button type="primary" size="small" onClick={() => handleAssign(record.id)}>
+                重新指派
+              </Button>
+            </>
+          )
         }
         if (record.status === 'in_progress') {
           return <span>处理中（已指派给 {record.assignedTo}）</span>
