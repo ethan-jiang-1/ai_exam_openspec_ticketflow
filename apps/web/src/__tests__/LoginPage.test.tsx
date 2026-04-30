@@ -190,4 +190,39 @@ describe('LoginPage', () => {
       expect(screen.getByDisplayValue('submitter')).toBeInTheDocument()
     })
   })
+
+  describe('expired param', () => {
+    function renderLoginPageWithExpired() {
+      return render(
+        <MemoryRouter initialEntries={['/login?expired=1']}>
+          <ConfigProvider>
+            <AntdApp>
+              <AuthProvider>
+                <LoginPage />
+              </AuthProvider>
+            </AntdApp>
+          </ConfigProvider>
+        </MemoryRouter>,
+      )
+    }
+
+    it('shows warning when ?expired=1 is present', async () => {
+      mockNotLoggedIn()
+      renderLoginPageWithExpired()
+
+      await waitFor(() => {
+        expect(screen.getByText('会话已过期，请重新登录')).toBeInTheDocument()
+      })
+    })
+
+    it('does not show warning when no expired param', async () => {
+      mockNotLoggedIn()
+      renderLoginPage()
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('请输入用户名')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('会话已过期，请重新登录')).toBeNull()
+    })
+  })
 })

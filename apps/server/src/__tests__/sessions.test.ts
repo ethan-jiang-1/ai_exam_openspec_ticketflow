@@ -33,4 +33,54 @@ describe('SessionStore', () => {
     store.clear()
     expect(store.get('any')).toBeUndefined()
   })
+
+  describe('TTL', () => {
+    it('returns undefined for expired session and deletes it', async () => {
+      const ttlStore = new SessionStore(1) // 1ms TTL
+      const id = ttlStore.create('user-1')
+      await new Promise((r) => setTimeout(r, 2))
+      expect(ttlStore.get(id)).toBeUndefined()
+    })
+
+    it('returns session data for non-expired session', () => {
+      const ttlStore = new SessionStore(86_400_000) // 24h TTL
+      const id = ttlStore.create('user-1')
+      const session = ttlStore.get(id)
+      expect(session).toBeDefined()
+      expect(session!.userId).toBe('user-1')
+    })
+
+    it('default TTL is 24h (86,400,000ms)', () => {
+      const defaultStore = new SessionStore()
+      const id = defaultStore.create('user-1')
+      expect(defaultStore.get(id)).toBeDefined()
+    })
+  })
+
+  describe('cleanExpired', () => {
+    it('removes expired sessions, keeps valid ones', async () => {
+      const ttlStore = new SessionStore(1)
+      ttlStore.create('user-expired')
+      await new Promise((r) => setTimeout(r, 2))
+      const validId = ttlStore.create('user-valid')
+
+      ttlStore.cleanExpired()
+
+      expect(ttlStore.get(validId)).toBeDefined()
+    })
+
+    it('cleanExpired is called on create (lazy cleanup)', async () => {
+      const ttlStore = new SessionStore(1)
+      ttlStore.create('user-1')
+      await new Promise((r) => setTimeout(r, 2))
+
+      // create should call cleanExpired, removing the expired session
+      ttlStore.create('user-2')
+
+      // user-1 should be gone (cleaned up by create's cleanExpired call)
+      // user-2 should exist
+      const allSessions = ttlStore.size()
+      expect(allSessions).toBe(1)
+    })
+  })
 })

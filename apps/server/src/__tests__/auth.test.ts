@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { createTestApp } from './helpers'
 import { users } from '../db/schema'
 import { sessionStore } from '../lib/sessions'
@@ -20,6 +20,10 @@ describe('Auth API', () => {
       passwordHash: await hashPassword(testPassword),
       createdAt: new Date().toISOString(),
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   // Helper: login and return response
@@ -44,7 +48,7 @@ describe('Auth API', () => {
   })
 
   describe('POST /api/auth/login', () => {
-    it('returns user and sets cookie on valid credentials', async () => {
+    it('returns user and sets cookie with Max-Age on valid credentials', async () => {
       const res = await login()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -55,6 +59,7 @@ describe('Auth API', () => {
 
       const setCookie = res.headers.get('set-cookie')
       expect(setCookie).toContain('ticketflow-session=')
+      expect(setCookie).toMatch(/Max-Age=86400/)
     })
 
     it('returns 400 when username is missing', async () => {
@@ -111,13 +116,35 @@ describe('Auth API', () => {
     it('returns 401 without session cookie', async () => {
       const res = await app.request('/api/auth/me')
       expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.error).toBe('未登录')
     })
 
-    it('returns 401 with invalid session cookie', async () => {
+    it('returns 401 with "会话已过期" for invalid session cookie', async () => {
       const res = await app.request('/api/auth/me', {
         headers: { Cookie: 'ticketflow-session=invalid-session-id' },
       })
       expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.error).toBe('会话已过期，请重新登录')
+    })
+
+    it('returns 401 with "会话已过期" for expired session', async () => {
+      vi.useFakeTimers()
+
+      // Login to create a session
+      const loginRes = await login()
+      const cookie = loginRes.headers.get('set-cookie')!
+
+      // Advance time by 25 hours
+      vi.advanceTimersByTime(25 * 60 * 60 * 1000)
+
+      const res = await app.request('/api/auth/me', {
+        headers: { Cookie: cookie },
+      })
+      expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.error).toBe('会话已过期，请重新登录')
     })
   })
 

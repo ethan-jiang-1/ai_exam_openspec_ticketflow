@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Form, Input, Button, Spin, Select, App as AntdApp } from 'antd'
 import type { InputRef } from 'antd'
 import { useAuth } from '../context/AuthContext'
@@ -27,6 +27,13 @@ export default function LoginPage() {
         .catch(() => {})
     }
   }, [loading, user])
+
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') {
+      message.warning('会话已过期，请重新登录')
+    }
+  }, [])
 
   const handleFinish = async (values: { username: string; password: string }) => {
     try {

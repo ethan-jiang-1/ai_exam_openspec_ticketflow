@@ -15,9 +15,7 @@ export async function sessionMiddleware(c: Context<AuthVariables>, next: Next) {
 
   const session = sessionStore.get(sessionId)
   if (!session) {
-    c.set('user', null)
-    await next()
-    return
+    return c.json({ error: '会话已过期，请重新登录' }, 401)
   }
 
   const db = c.get('db')

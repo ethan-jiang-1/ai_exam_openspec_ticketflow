@@ -50,6 +50,7 @@ authRoute.post('/login', async (c) => {
     httpOnly: true,
     sameSite: 'Lax',
     path: '/',
+    maxAge: 86400,
   })
 
   return c.json({

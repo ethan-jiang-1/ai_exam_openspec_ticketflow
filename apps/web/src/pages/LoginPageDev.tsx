@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Row, Col, Card, Input, Button, Spin, App as AntdApp } from 'antd'
 import { useAuth } from '../context/AuthContext'
 import { getUsers } from '../api/client'
@@ -27,6 +27,13 @@ export default function LoginPageDev() {
       .then(setUsers)
       .catch(() => message.error('获取用户列表失败'))
   }, [loading, user, message])
+
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') {
+      message.warning('会话已过期，请重新登录')
+    }
+  }, [])
 
   const handleLogin = async (username: string) => {
     try {

@@ -158,4 +158,59 @@ describe('LoginPageDev', () => {
       expect(screen.getByText('获取用户列表失败')).toBeInTheDocument()
     })
   })
+
+  describe('expired param', () => {
+    function renderLoginPageDevWithExpired() {
+      return render(
+        <MemoryRouter initialEntries={['/login-dev?expired=1']}>
+          <ConfigProvider>
+            <AntdApp>
+              <AuthProvider>
+                <LoginPageDev />
+              </AuthProvider>
+            </AntdApp>
+          </ConfigProvider>
+        </MemoryRouter>,
+      )
+    }
+
+    it('shows warning when ?expired=1 is present', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: 'Not logged in' }) } as Response)
+        }
+        if (urlStr === '/api/auth/users') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      })
+
+      renderLoginPageDevWithExpired()
+
+      await waitFor(() => {
+        expect(screen.getByText('会话已过期，请重新登录')).toBeInTheDocument()
+      })
+    })
+
+    it('does not show warning when no expired param', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: 'Not logged in' }) } as Response)
+        }
+        if (urlStr === '/api/auth/users') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      })
+
+      renderLoginPageDev()
+
+      await waitFor(() => {
+        expect(screen.getByText('选择用户登录')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('会话已过期，请重新登录')).toBeNull()
+    })
+  })
 })
