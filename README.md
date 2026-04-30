@@ -28,6 +28,11 @@ pnpm dev
 | `pnpm lint` | ESLint 代码检查 |
 | `pnpm format` | Prettier 格式化 |
 | `pnpm check` | **健康检测** — build + test + lint 一键验证 |
+| `pnpm e2e` | Playwright 浏览器 E2E 测试（headless） |
+| `pnpm e2e:local` | 对本地 http://localhost:5173 运行 E2E |
+| `pnpm e2e:remote` | 对 Cloudflare 部署运行 E2E |
+| `pnpm e2e:diagnose` | 诊断模式（headed 可见浏览器，手动调试） |
+| `pnpm e2e:investigate` | 调查模式（headless 自动探查，捕获全量诊断数据） |
 
 ## 环境健康检测
 

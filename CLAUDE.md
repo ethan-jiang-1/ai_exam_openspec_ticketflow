@@ -15,7 +15,7 @@ SDLC 遵循 OpenSpec：propose → design → specs → tasks → apply → arch
 ├── openspec/
 │   ├── specs/           13 个能力 spec
 │   └── changes/archive/ 已归档 change
-├── scripts/             e2e 冒烟测试
+├── scripts/             辅助脚本（冒烟/诊断/调查，见 scripts/README.md）
 ├── data/                SQLite 数据文件
 └── docs/                运维文档
 ```
@@ -50,3 +50,8 @@ SDLC 遵循 OpenSpec：propose → design → specs → tasks → apply → arch
 | `pnpm test` | 运行所有测试 |
 | `pnpm lint` | ESLint 检查 |
 | `pnpm check` | build + test + lint 一键验证 |
+| `pnpm e2e` | Playwright 浏览器端到端测试 |
+| `pnpm e2e:local` | 对本地 localhost 跑 E2E |
+| `pnpm e2e:remote` | 对 Cloudflare 远程跑 E2E |
+| `pnpm e2e:diagnose` | 诊断模式（headed 可见浏览器） |
+| `pnpm e2e:investigate` | 调查模式（headless 探查，捕获全量诊断数据） |

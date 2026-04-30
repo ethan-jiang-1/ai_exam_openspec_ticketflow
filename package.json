@@ -12,10 +12,16 @@
     "test": "pnpm -r --stream --filter @ticketflow/* run test",
     "lint": "eslint apps/ packages/",
     "format": "prettier --write \"apps/**/*.ts\" \"apps/**/*.tsx\" \"packages/**/*.ts\"",
-    "check": "pnpm run build && pnpm run test && pnpm run lint"
+    "check": "pnpm run build && pnpm run test && pnpm run lint",
+    "e2e": "pnpm exec playwright test --config=tests/e2e/playwright.config.ts",
+    "e2e:local": "E2E_BASE_URL=http://localhost:5173 pnpm e2e",
+    "e2e:remote": "E2E_BASE_URL=https://ai-exam-openspec-ticketflow.ethan1-jiang.workers.dev pnpm e2e",
+    "e2e:diagnose": "node scripts/e2e-diagnose.mjs",
+    "e2e:investigate": "node scripts/e2e-investigate-remote.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
     "concurrently": "^9.2.1",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",

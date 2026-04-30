@@ -245,10 +245,10 @@ Dashboard → D1 → ticketflow-db → Console，执行：
 
 ```sql
 INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `password_hash`, `created_at`) VALUES
-  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '38e1ecb1f9e092b3:9f33df3e56dee5a336712b3cf5ed9c248b5a0ce7ec4f1b54e9c35e6ee1dd6c03', '2026-01-01T00:00:00Z');
+  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '5cb16417fc52425121b2df3d6d3792874dff7e40a2d4dc9c8c5f13b66cf94a1c:76da450a1eda2144273058d383ff3a8d57f9bfc523d770614383355685f89a9e', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'acc18b5634b47758078ff9c96cc4bbb9fb3eb33abfcf6a34d1c2f5f60b2da4ef:3123ca69a4b61f31184920ff44adde7276f44c0e1e010969c6651839b357e1ea', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'b67c9d5960c3dcf428764debf4c64d8bea6fcb3641287f7e84f6e591294bccb3:51db018ebce0894ceedb06d05633ccd43dcddf547c961183080ad8482f08eb87f', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '8d5b7927cd47cd7c28759a21ad45b6b08a7484a276a9dbcbc6487b068bb634ed:da0db2dec8169f1880e575c680df1e74bf6250631838b8d4895d58b751bcad90', '2026-01-01T00:00:00Z');
 ```
 
 > 密码：submitter/dispatcher/completer 的密码为 `changeme`，admin 的密码为 `admin`。上表中的 `password_hash` 是 `salt:hash` 格式的 PBKDF2-SHA256 值（100k 次迭代）。
@@ -484,10 +484,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`
 
 ```sql
 INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `password_hash`, `created_at`) VALUES
-  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'af5c22ee1e9e47e3:364d1fbe8a49923191e9b75e2bddc6b7a2e5a68c72bf76d41fc03698c445a1eb', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '38e1ecb1f9e092b3:9f33df3e56dee5a336712b3cf5ed9c248b5a0ce7ec4f1b54e9c35e6ee1dd6c03', '2026-01-01T00:00:00Z');
+  ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '5cb16417fc52425121b2df3d6d3792874dff7e40a2d4dc9c8c5f13b66cf94a1c:76da450a1eda2144273058d383ff3a8d57f9bfc523d770614383355685f89a9e', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'acc18b5634b47758078ff9c96cc4bbb9fb3eb33abfcf6a34d1c2f5f60b2da4ef:3123ca69a4b61f31184920ff44adde7276f44c0e1e010969c6651839b357e1ea', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'b67c9d5960c3dcf428764debf4c64d8bea6fcb3641287f7e84f6e591294bccb3:51db018ebce0894ceedb06d05633ccd43dcddf547c961183080ad8482f08eb87f', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '8d5b7927cd47cd7c28759a21ad45b6b08a7484a276a9dbcbc6487b068bb634ed:da0db2dec8169f1880e575c680df1e74bf6250631838b8d4895d58b751bcad90', '2026-01-01T00:00:00Z');
 ```
 
 > 密码：submitter/dispatcher/completer → `changeme`，admin → `admin`。`INSERT OR IGNORE` 保证可重复执行（username 已存在则跳过）。

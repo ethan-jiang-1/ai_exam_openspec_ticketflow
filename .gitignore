@@ -37,3 +37,8 @@ coverage/
 
 # Vite
 apps/web/dist/
+
+# Playwright
+test-results/
+playwright-report/
+tests/e2e/screenshots/
