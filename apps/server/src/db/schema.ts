@@ -5,6 +5,8 @@ export const tickets = sqliteTable('tickets', {
   title: text('title').notNull(),
   description: text('description').notNull(),
   status: text('status').notNull().default('submitted'),
+  priority: text('priority').notNull().default('medium'),
+  dueDate: text('due_date'),
   createdBy: text('created_by').notNull(),
   assignedTo: text('assigned_to'),
   createdAt: text('created_at').notNull(),

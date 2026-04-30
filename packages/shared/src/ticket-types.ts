@@ -24,6 +24,28 @@ export type TicketStatus = (typeof TICKET_STATUSES)[keyof typeof TICKET_STATUSES
 export const TICKET_STATUS_LIST: readonly TicketStatus[] =
   Object.values(TICKET_STATUSES)
 
+// --- Priority ---
+
+export const PRIORITIES = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const
+
+export type Priority = (typeof PRIORITIES)[keyof typeof PRIORITIES]
+
+export const PRIORITY_ORDER: Record<Priority, number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+}
+
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  low: '低',
+  medium: '中',
+  high: '高',
+}
+
 // --- Ticket ---
 
 export interface Ticket {
@@ -31,6 +53,8 @@ export interface Ticket {
   title: string
   description: string
   status: TicketStatus
+  priority: Priority
+  dueDate: string | null
   createdBy: string
   assignedTo: string | null
   createdAt: string

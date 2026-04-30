@@ -89,6 +89,36 @@ describe('Tickets API', () => {
       const body = await res.json()
       expect(body.createdBy).toBe('submitter')
     })
+
+    it('should create ticket with priority and dueDate', async () => {
+      const res = await createTicket({ priority: 'high', dueDate: '2026-06-01' })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.priority).toBe('high')
+      expect(body.dueDate).toBe('2026-06-01')
+    })
+
+    it('should default priority to medium and dueDate to null', async () => {
+      const res = await createTicket()
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.priority).toBe('medium')
+      expect(body.dueDate).toBeNull()
+    })
+
+    it('should reject invalid priority with 400', async () => {
+      const res = await createTicket({ priority: 'urgent' })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.error).toMatch(/priority/i)
+    })
+
+    it('should reject invalid dueDate with 400', async () => {
+      const res = await createTicket({ dueDate: 'not-a-date' })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.error).toMatch(/dueDate/i)
+    })
   })
 
   describe('GET /api/tickets', () => {
@@ -166,6 +196,18 @@ describe('Tickets API', () => {
         body: JSON.stringify({ assignedTo: 'completer' }),
       })
       expect(res.status).toBe(404)
+    })
+
+    it('should reject assigning to non-existent user with 400', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'nobody' }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body).toEqual({ error: '指派目标用户不存在' })
     })
   })
 

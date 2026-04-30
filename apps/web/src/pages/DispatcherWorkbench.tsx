@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Table, Tag, Button, Select, Empty, Drawer, Descriptions, App as AntdApp } from 'antd'
-import { getTickets, assignTicket } from '../api/client'
-import type { Ticket } from '@ticketflow/shared'
+import { getTickets, getUsers, assignTicket } from '../api/client'
+import { PRIORITY_LABELS, PRIORITY_ORDER } from '@ticketflow/shared'
+import type { Ticket, Priority, User } from '@ticketflow/shared'
 
 const STATUS_COLORS: Record<string, string> = {
   submitted: 'blue',
@@ -17,17 +18,26 @@ const STATUS_LABELS: Record<string, string> = {
   completed: '已完成',
 }
 
-const ASSIGNEE_OPTIONS = ['completer']
+const PRIORITY_COLORS: Record<string, string> = {
+  high: 'red',
+  medium: 'orange',
+  low: 'blue',
+}
 
 export default function DispatcherWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+  const [assignees, setAssignees] = useState<User[]>([])
+  const [assignValues, setAssignValues] = useState<Record<string, string>>({})
   const { message } = AntdApp.useApp()
 
   const fetchTickets = async () => {
     try {
       const all = await getTickets()
-      setTickets(all.filter((t) => t.status !== 'completed'))
+      const filtered = all
+        .filter((t) => t.status !== 'completed')
+        .sort((a, b) => (PRIORITY_ORDER[b.priority] ?? 0) - (PRIORITY_ORDER[a.priority] ?? 0))
+      setTickets(filtered)
     } catch (e) {
       message.error(e instanceof Error ? e.message : '获取工单失败')
     }
@@ -35,11 +45,19 @@ export default function DispatcherWorkbench() {
 
   useEffect(() => {
     fetchTickets()
+    getUsers()
+      .then((users) => setAssignees(users.filter((u) => u.role === 'completer')))
+      .catch(() => {})
   }, [])
 
   const handleAssign = async (id: string) => {
+    const target = assignValues[id] || assignees[0]?.username
+    if (!target) {
+      message.error('无可指派的用户')
+      return
+    }
     try {
-      await assignTicket(id, 'completer')
+      await assignTicket(id, target)
       await fetchTickets()
     } catch (e) {
       message.error(e instanceof Error ? e.message : '指派失败')
@@ -52,10 +70,17 @@ export default function DispatcherWorkbench() {
       dataIndex: 'title',
       key: 'title',
       ellipsis: true,
-      width: '40%',
+      width: '35%',
       render: (title: string, record: Ticket) => (
         <a onClick={() => setSelectedTicket(record)}>{title}</a>
       ),
+    },
+    {
+      title: '优先级',
+      dataIndex: 'priority',
+      key: 'priority',
+      width: 80,
+      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
     },
     {
       title: '状态',
@@ -83,9 +108,10 @@ export default function DispatcherWorkbench() {
           return (
             <>
               <Select
-                defaultValue="completer"
+                value={assignValues[record.id] || assignees[0]?.username}
                 style={{ width: 120, marginRight: 8 }}
-                options={ASSIGNEE_OPTIONS.map((a) => ({ value: a, label: a }))}
+                onChange={(v) => setAssignValues((prev) => ({ ...prev, [record.id]: v }))}
+                options={assignees.map((a) => ({ value: a.username, label: a.displayName }))}
               />
               <Button type="primary" size="small" onClick={() => handleAssign(record.id)}>
                 指派
@@ -130,6 +156,27 @@ export default function DispatcherWorkbench() {
           <Descriptions column={1} bordered size="small">
             <Descriptions.Item label="状态">
               <Tag color={STATUS_COLORS[selectedTicket.status]}>{STATUS_LABELS[selectedTicket.status]}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="优先级">
+              <Tag color={PRIORITY_COLORS[selectedTicket.priority]}>{PRIORITY_LABELS[selectedTicket.priority as Priority] ?? selectedTicket.priority}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="截止日期">
+              {selectedTicket.dueDate
+                ? (() => {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const due = new Date(selectedTicket.dueDate + 'T00:00:00')
+                    const isOverdue = due < today
+                    const isToday = due.getTime() === today.getTime()
+                    return (
+                      <span style={(isOverdue || isToday) ? { color: 'red' } : {}}>
+                        {due.toLocaleDateString()}
+                        {isOverdue && <Tag color="red" style={{ marginLeft: 4 }}>已到期</Tag>}
+                        {isToday && <Tag color="red" style={{ marginLeft: 4 }}>今日到期</Tag>}
+                      </span>
+                    )
+                  })()
+                : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="创建者">{selectedTicket.createdBy}</Descriptions.Item>
             <Descriptions.Item label="指派给">{selectedTicket.assignedTo ?? '—'}</Descriptions.Item>

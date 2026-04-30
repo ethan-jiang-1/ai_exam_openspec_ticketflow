@@ -1,4 +1,4 @@
-import type { Ticket } from '@ticketflow/shared'
+import type { Ticket, Priority, User } from '@ticketflow/shared'
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -21,6 +21,8 @@ export async function getTicket(id: string): Promise<Ticket> {
 export async function createTicket(data: {
   title: string
   description: string
+  priority?: Priority
+  dueDate?: string
 }): Promise<Ticket> {
   const res = await fetch('/api/tickets', {
     method: 'POST',
@@ -60,7 +62,7 @@ export async function completeTicket(id: string): Promise<Ticket> {
   return handleResponse<Ticket>(res)
 }
 
-export async function getUsers(): Promise<{ username: string; displayName: string; role: string }[]> {
+export async function getUsers() {
   const res = await fetch('/api/auth/users', { credentials: 'include' })
-  return handleResponse<{ username: string; displayName: string; role: string }[]>(res)
+  return handleResponse<User[]>(res)
 }

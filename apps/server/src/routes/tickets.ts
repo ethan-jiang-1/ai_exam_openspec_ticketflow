@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
-import { tickets } from '../db/schema'
-import type { TicketStatus } from '@ticketflow/shared'
+import { tickets, users } from '../db/schema'
+import { PRIORITIES, type TicketStatus } from '@ticketflow/shared'
 import type { AuthVariables } from '../db/types'
 import { requireAuth } from '../middleware/auth'
 import { requirePermission } from '../lib/permissions'
@@ -30,7 +30,7 @@ ticketsRoute.get('/:id', requireAuth, async (c) => {
 ticketsRoute.post('/', requireAuth, requirePermission('ticket:create'), async (c) => {
   const db = c.get('db')
   const user = c.get('user')!
-  const body = await c.req.json<{ title?: string; description?: string }>()
+  const body = await c.req.json<{ title?: string; description?: string; priority?: string; dueDate?: string }>()
 
   if (!body.title || body.title.trim() === '') {
     return c.json({ error: 'title is required' }, 400)
@@ -42,14 +42,27 @@ ticketsRoute.post('/', requireAuth, requirePermission('ticket:create'), async (c
     return c.json({ error: 'description must be at most 2000 characters' }, 400)
   }
 
+  const priority = body.priority || 'medium'
+  const validPriorities = Object.values(PRIORITIES) as string[]
+  if (!validPriorities.includes(priority)) {
+    return c.json({ error: 'priority must be one of: low, medium, high' }, 400)
+  }
+
+  const dueDate = body.dueDate ?? null
+  if (dueDate !== null && isNaN(Date.parse(dueDate))) {
+    return c.json({ error: 'dueDate must be a valid date' }, 400)
+  }
+
   const now = new Date().toISOString()
   const newTicket = {
     id: crypto.randomUUID(),
     title: body.title,
     description: body.description ?? '',
     status: 'submitted' satisfies TicketStatus,
+    priority,
+    dueDate,
     createdBy: user.username,
-    assignedTo: null,
+    assignedTo: null as string | null,
     createdAt: now,
     updatedAt: now,
   }
@@ -74,14 +87,23 @@ ticketsRoute.patch('/:id/assign', requireAuth, requirePermission('ticket:assign'
   }
 
   const body = await c.req.json<{ assignedTo?: string }>()
+  const assignedTo = body.assignedTo ?? null
+
+  if (assignedTo) {
+    const targetUser = await db.select().from(users).where(eq(users.username, assignedTo))
+    if (targetUser.length === 0) {
+      return c.json({ error: '指派目标用户不存在' }, 400)
+    }
+  }
+
   const now = new Date().toISOString()
 
   await db
     .update(tickets)
-    .set({ status: 'assigned', assignedTo: body.assignedTo ?? null, updatedAt: now })
+    .set({ status: 'assigned', assignedTo, updatedAt: now })
     .where(eq(tickets.id, id))
 
-  return c.json({ ...ticket, status: 'assigned', assignedTo: body.assignedTo ?? null, updatedAt: now })
+  return c.json({ ...ticket, status: 'assigned', assignedTo, updatedAt: now })
 })
 
 // PATCH /api/tickets/:id/start

@@ -11,12 +11,18 @@ import CompleterWorkbench from '../pages/CompleterWorkbench'
 const mockUser = { id: 'u1', username: 'submitter', displayName: '提交者', role: 'submitter' as const, createdAt: '2026-01-01T00:00:00Z' }
 
 const mockTickets = [
-  { id: '1', title: 'Ticket A', description: '', status: 'submitted', createdBy: 'submitter', assignedTo: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: '2', title: 'Ticket B', description: '', status: 'assigned', createdBy: 'dispatcher', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: '3', title: 'Ticket C', description: '', status: 'submitted', createdBy: 'dispatcher', assignedTo: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: '4', title: 'Ticket D', description: '', status: 'in_progress', createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: '5', title: 'Ticket E', description: '', status: 'assigned', createdBy: 'dispatcher', assignedTo: 'other_person', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: '6', title: 'Ticket F', description: 'A detailed description for ticket F', status: 'completed', createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '1', title: 'Ticket A', description: '', status: 'submitted', priority: 'high', dueDate: null, createdBy: 'submitter', assignedTo: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '2', title: 'Ticket B', description: '', status: 'assigned', priority: 'medium', dueDate: '2026-06-01', createdBy: 'dispatcher', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '3', title: 'Ticket C', description: '', status: 'submitted', priority: 'low', dueDate: null, createdBy: 'dispatcher', assignedTo: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '4', title: 'Ticket D', description: '', status: 'in_progress', priority: 'high', dueDate: null, createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '5', title: 'Ticket E', description: '', status: 'assigned', priority: 'medium', dueDate: null, createdBy: 'dispatcher', assignedTo: 'other_person', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: '6', title: 'Ticket F', description: 'A detailed description for ticket F', status: 'completed', priority: 'low', dueDate: null, createdBy: 'submitter', assignedTo: 'completer', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+]
+
+const mockUsers = [
+  { username: 'submitter', displayName: '提交者', role: 'submitter', id: 'u1', createdAt: '2026-01-01T00:00:00Z' },
+  { username: 'dispatcher', displayName: '调度者', role: 'dispatcher', id: 'u2', createdAt: '2026-01-01T00:00:00Z' },
+  { username: 'completer', displayName: '完成者', role: 'completer', id: 'u3', createdAt: '2026-01-01T00:00:00Z' },
 ]
 
 function renderPage(path: string, element: React.ReactElement) {
@@ -34,7 +40,6 @@ function renderPage(path: string, element: React.ReactElement) {
 describe('Workbench filtering', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    // Mock /api/auth/me to return logged-in user
     vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
       if (urlStr === '/api/auth/me') {
@@ -63,6 +68,9 @@ describe('Workbench filtering', () => {
       const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
       if (urlStr === '/api/auth/me') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
     })
@@ -120,5 +128,64 @@ describe('Workbench ticket detail', () => {
     await waitFor(() => {
       expect(screen.getByText('A detailed description for ticket F')).toBeInTheDocument()
     })
+  })
+})
+
+describe('Priority display', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+  })
+
+  it('shows priority tags in table', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+    expect(screen.getAllByText('高').length).toBeGreaterThan(0)
+  })
+
+  it('Dispatcher shows priority tags', async () => {
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+    expect(screen.getAllByText('高').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('中').length).toBeGreaterThan(0)
+  })
+})
+
+describe('Dispatcher assignee dropdown', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+  })
+
+  it('shows only completer users in assignee dropdown', async () => {
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+    expect(screen.getAllByText('完成者').length).toBeGreaterThan(0)
+    expect(screen.queryByText('提交者')).not.toBeInTheDocument()
+    expect(screen.queryByText('调度者')).not.toBeInTheDocument()
   })
 })

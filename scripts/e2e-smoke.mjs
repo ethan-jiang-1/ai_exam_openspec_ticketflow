@@ -198,12 +198,14 @@ async function testMeUnauth() {
 async function testCreateTicket(cookie) {
   const { status, body } = await request('/api/tickets', {
     method: 'POST',
-    body: JSON.stringify({ title: 'E2E smoke test ticket', description: 'Created by automated smoke test' }),
+    body: JSON.stringify({ title: 'E2E smoke test ticket', description: 'Created by automated smoke test', priority: 'high', dueDate: '2026-06-01' }),
     headers: { Cookie: cookie },
   })
   if (status !== 201) throw new Error(`Expected 201, got ${status}: ${JSON.stringify(body)}`)
   if (body.status !== 'submitted') throw new Error(`Expected "submitted", got "${body.status}"`)
   if (body.createdBy !== 'submitter') throw new Error(`Expected createdBy="submitter", got "${body.createdBy}"`)
+  if (body.priority !== 'high') throw new Error(`Expected priority="high", got "${body.priority}"`)
+  if (body.dueDate !== '2026-06-01') throw new Error(`Expected dueDate="2026-06-01", got "${body.dueDate}"`)
   logPass('create ticket')
   return body
 }

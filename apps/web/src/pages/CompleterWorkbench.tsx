@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Table, Tag, Button, Drawer, Descriptions, App as AntdApp } from 'antd'
 import { getTickets, startTicket, completeTicket } from '../api/client'
-import type { Ticket } from '@ticketflow/shared'
+import { PRIORITY_LABELS } from '@ticketflow/shared'
+import type { Ticket, Priority } from '@ticketflow/shared'
 
 const STATUS_COLORS: Record<string, string> = {
   submitted: 'blue',
@@ -15,6 +16,12 @@ const STATUS_LABELS: Record<string, string> = {
   assigned: '已指派',
   in_progress: '处理中',
   completed: '已完成',
+}
+
+const PRIORITY_COLORS: Record<string, string> = {
+  high: 'red',
+  medium: 'orange',
+  low: 'blue',
 }
 
 export default function CompleterWorkbench() {
@@ -65,10 +72,17 @@ export default function CompleterWorkbench() {
       dataIndex: 'title',
       key: 'title',
       ellipsis: true,
-      width: '40%',
+      width: '35%',
       render: (title: string, record: Ticket) => (
         <a onClick={() => setSelectedTicket(record)}>{title}</a>
       ),
+    },
+    {
+      title: '优先级',
+      dataIndex: 'priority',
+      key: 'priority',
+      width: 80,
+      render: (priority: string) => <Tag color={PRIORITY_COLORS[priority]}>{PRIORITY_LABELS[priority as Priority] ?? priority}</Tag>,
     },
     {
       title: '状态',
@@ -133,6 +147,9 @@ export default function CompleterWorkbench() {
           <Descriptions column={1} bordered size="small">
             <Descriptions.Item label="状态">
               <Tag color={STATUS_COLORS[selectedTicket.status]}>{STATUS_LABELS[selectedTicket.status]}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="优先级">
+              <Tag color={PRIORITY_COLORS[selectedTicket.priority]}>{PRIORITY_LABELS[selectedTicket.priority as Priority] ?? selectedTicket.priority}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="创建者">{selectedTicket.createdBy}</Descriptions.Item>
             <Descriptions.Item label="指派给">{selectedTicket.assignedTo ?? '—'}</Descriptions.Item>

@@ -40,11 +40,13 @@ describe('Integration: full ticket lifecycle', () => {
     const createRes = await app.request('/api/tickets', {
       method: 'POST',
       headers: submitterH,
-      body: JSON.stringify({ title: 'Integration test', description: 'Full flow' }),
+      body: JSON.stringify({ title: 'Integration test', description: 'Full flow', priority: 'high', dueDate: '2026-06-01' }),
     })
     expect(createRes.status).toBe(201)
     const created = await createRes.json()
     expect(created.status).toBe('submitted')
+    expect(created.priority).toBe('high')
+    expect(created.dueDate).toBe('2026-06-01')
     expect(created.createdBy).toBe('submitter')
     expect(created.assignedTo).toBeNull()
 
@@ -58,6 +60,8 @@ describe('Integration: full ticket lifecycle', () => {
     const assigned = await assignRes.json()
     expect(assigned.status).toBe('assigned')
     expect(assigned.assignedTo).toBe('completer')
+    expect(assigned.priority).toBe('high')
+    expect(assigned.dueDate).toBe('2026-06-01')
 
     // Step 3: Start ticket (as completer)
     const startRes = await app.request(`/api/tickets/${created.id}/start`, {
@@ -77,5 +81,7 @@ describe('Integration: full ticket lifecycle', () => {
     const completed = await completeRes.json()
     expect(completed.status).toBe('completed')
     expect(completed.id).toBe(created.id)
+    expect(completed.priority).toBe('high')
+    expect(completed.dueDate).toBe('2026-06-01')
   })
 })
