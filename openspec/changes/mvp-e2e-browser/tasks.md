@@ -44,4 +44,4 @@
 - [ ] 7.2 本地启动 `pnpm dev` → 运行 `E2E_BASE_URL=http://localhost:5173 pnpm e2e` → 全部通过 [BA-001]
 - [ ] 7.3 运行 `E2E_BASE_URL=https://ai-exam-openspec-ticketflow.ethan1-jiang.workers.dev pnpm e2e:remote` 验证远程环境 [BA-001]
 - [ ] 7.4 运行 `pnpm e2e:diagnose` 验证诊断模式——浏览器窗口打开、无报错、Ctrl+C 正常退出 [BA-001]
-- [ ] 7.5 更新 `README.md`：在「可用脚本」表新增 `e2e` / `e2e:local` / `e2e:remote` / `e2e:diagnose` 说明
+- [ ] 7.5 更新 `README.md` 和 `CLAUDE.md`：在命令表新增 `e2e` / `e2e:local` / `e2e:remote` / `e2e:diagnose` 说明

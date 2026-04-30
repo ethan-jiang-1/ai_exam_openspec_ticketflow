@@ -74,7 +74,7 @@ Playwright config 通过 `process.env.E2E_BASE_URL` 读取，默认 `http://loca
 | 入口 | `pnpm e2e` | `pnpm e2e:diagnose` |
 | 浏览器 | headless（无头） | `headless: false`（有头可视） |
 | 行为 | 跑完所有 `.spec.ts`，断言 pass/fail | 打开指定 URL，浏览器保持打开，不做断言 |
-| 输出 | vitest 风格测试报告 | console/network 实时 stdout + 截图 |
+| 输出 | Playwright 测试报告 | console/network 实时 stdout + 截图 |
 | 用途 | 自动化验证（本地+远程） | 手动排查线上问题 |
 | 实现 | `tests/e2e/*.spec.ts` | `scripts/e2e-diagnose.mjs` |
 

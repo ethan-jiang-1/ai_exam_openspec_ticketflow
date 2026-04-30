@@ -1,7 +1,7 @@
 # dev-tooling Specification
 
 ## Purpose
-开发工具链配置规范：ESLint、Prettier、Vitest、Playwright、统一脚本、TypeScript 依赖声明和部署配置。
+开发工具链配置规范：ESLint、Prettier、Vitest、统一脚本、TypeScript 依赖声明和部署配置。
 
 ## MODIFIED Requirements
 

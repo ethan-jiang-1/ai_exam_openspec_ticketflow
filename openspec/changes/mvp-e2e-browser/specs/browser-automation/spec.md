@@ -50,7 +50,7 @@ E2E 测试模式和诊断模式 SHALL 均自动捕获浏览器 console.log 和 n
 
 - **WHEN** 诊断模式正在运行
 - **AND** 浏览器发起任意 HTTP 请求
-- **THEN** 终端 SHALL 实时输出该请求的 URL、method、status code、response headers
+- **THEN** 终端 SHALL 实时输出该请求的 URL、method、status code、response headers、response body
 
 #### Scenario: 测试失败自动截图
 
