@@ -127,7 +127,7 @@ pnpm dev
 
 - [x] 最小角色登录 / 身份区分
 - [x] 不同角色登录后进入不同工作台
-- [ ] 角色不同，主线动作权限和可见内容不同
+- [x] 角色不同，主线动作权限和可见内容不同
 - [ ] priority / assignee / dueDate 等关键字段开始进入主线判断
 - [ ] 至少一组关键状态推进有明确规则
 - [ ] 非法推进时有清楚反馈
@@ -147,7 +147,7 @@ pnpm dev
 │
 ├──→ ② mvp-user-auth ──── 用户表 + 预置账号登录 + 会话 + 角色路由 ✓ 已完成
 │
-├──→ ③ mvp-permission ──── 权限中间件 + Dashboard 统计页（视觉亮点）
+├──→ ③ mvp-permission ──── 权限中间件 + Dashboard 统计页（视觉亮点） ✓ 已完成
 │
 └──→ ④ mvp-ticket-enrichment ─ priority/dueDate + 工单详情 Drawer（视觉亮点）
         │
