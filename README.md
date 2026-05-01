@@ -1,88 +1,69 @@
 # TicketFlow
 
-工单流程处理工具 — TypeScript 全栈应用。
+角色驱动的工单流转系统，实现「**提交 → 指派 → 处理 → 完成**」的完整工作流。
 
-## 前置要求
+它解决小团队任务口头交代、状态不可见的问题。提交者创建工单，调度者统一分配，完成者处理后流转，管理员全局视角。每条工单都有 ticket_history 记录完整的操作时间线。
 
-- Node.js >= 18.0.0
-- pnpm
+项目按 OpenSpec 规格驱动开发：propose → design → specs → tasks → apply → archive，每次变更都有完整的设计、规格和任务记录。
 
 ## 快速开始
 
 ```bash
 pnpm install
-cp .env.example .env
-pnpm dev
+pnpm dev                 # 前端 :5173 + 后端 :3000
 ```
 
-- 前端：http://localhost:5173
-- 后端 API：http://localhost:3000
+`cp .env.example .env` 可跳过（均有默认值）。服务启动时自动建表。
 
-## 可用脚本
+## 预置账号
+
+先启动一次让表创建好，再写入演示数据：
+
+```bash
+pnpm --filter @ticketflow/server run db:seed
+```
+
+| 用户名 | 密码 | 角色 |
+|--------|------|------|
+| `submitter` | `changeme` | 提交者 |
+| `dispatcher` | `changeme` | 调度者 |
+| `completer` | `changeme` | 完成者 |
+| `completer2` | `changeme` | 完成者（演示重新指派） |
+| `admin` | `admin` | 管理员 |
+
+seed 写入 5 用户 + 10 工单（覆盖全部状态）+ 完整 ticket_history，可直接演示或 Dashboard 截图。
+
+## 2 分钟演示
+
+1. `pnpm dev` → http://localhost:5173
+2. submitter 登录 → 创建工单
+3. dispatcher 登录 → 指派给 completer
+4. completer 登录 → 开始处理 → 完成
+5. admin 登录 → 查看数据面板或管理用户
+
+## 常用命令
 
 | 命令 | 说明 |
 |------|------|
-| `pnpm dev` | 同时启动前端和后端开发服务器 |
-| `pnpm build` | 构建所有工作区 |
-| `pnpm test` | 运行所有测试 |
-| `pnpm lint` | ESLint 代码检查 |
-| `pnpm format` | Prettier 格式化 |
-| `pnpm check` | **健康检测** — build + test + lint 一键验证 |
-| `pnpm e2e` | Playwright 浏览器 E2E 测试（headless） |
-| `pnpm e2e:local` | 对本地 http://localhost:5173 运行 E2E |
-| `pnpm e2e:remote` | 对 Cloudflare 部署运行 E2E |
-| `pnpm e2e:diagnose` | 诊断模式（headed 可见浏览器，手动调试） |
-| `pnpm e2e:investigate` | 调查模式（headless 自动探查，捕获全量诊断数据） |
+| `pnpm dev` | 启动前端 + 后端 |
+| `pnpm check` | build + test + lint 一键验证 |
+| `pnpm test` | 单元测试（Vitest） |
+| `pnpm e2e` | 浏览器端到端测试（Playwright） |
 
-## 环境健康检测
+## 技术概要
 
-环境搭建完成后，运行：
+前端 React 19 + antd 6 + Vite，后端 Hono 4 + SQLite + Drizzle ORM，pnpm monorepo。Cookie session（24h TTL）+ PBKDF2-SHA256 认证。Vite 将 `/api` 请求 proxy 到后端，前端无需配置 API base URL。
 
-```bash
-pnpm check
-```
+## 目录
 
-此命令依次执行 build、test、lint，全部通过即表示开发环境正常。
+| 目录 | 说明 |
+|------|------|
+| [apps/](apps/) | server（Hono API） + web（React 前端） |
+| [packages/](packages/) | `@ticketflow/shared` 共享类型 |
+| [tests/](tests/) | Playwright E2E 测试 |
+| [data/](data/) | SQLite 数据库文件 |
+| [docs/](docs/) | 运维参考文档 |
+| [openspec/](openspec/) | OpenSpec 规格与变更管理 |
+| [scripts/](scripts/) | 辅助脚本（冒烟/诊断/调查） |
 
-完整 Roadmap（Demo + MVP + 未来方向）见 [ROADMAP.md](./ROADMAP.md)。
-
-## 演示步骤
-
-> 2 分钟跑通完整 Demo 流程（三角色工单流转）
-
-**1. 启动服务**
-
-```bash
-pnpm install
-pnpm dev
-```
-
-浏览器打开 http://localhost:5173
-
-**2. 提交者创建工单**
-
-- 在登录页输入用户名 `submitter`，密码 `changeme`，点击「登录」
-- 填写工单标题（如 "修复登录页面 Bug"）、描述、优先级和截止日期
-- 点击「提交工单」
-- 工单出现在下方列表中，可点击查看详情
-
-**3. 调度者指派工单**
-
-- 点击左侧「退出登录」回到登录页
-- 输入用户名 `dispatcher`，密码 `changeme`，点击「登录」
-- 在待指派的工单行中，通过下拉选择指派人（如 completer）
-- 点击「指派」
-
-**4. 完成者处理工单**
-
-- 退出登录，输入用户名 `completer`，密码 `changeme`，点击「登录」
-- 点击工单的「开始处理」
-- 状态变为 in_progress 后，点击「完成」
-- 工单状态变为 completed，流转结束
-
-**5. 管理员管理用户（可选）**
-
-- 退出登录，输入用户名 `admin`，密码 `admin`，点击「登录」
-- 进入用户管理工作台，可新增/编辑/删除用户
-
-未来方向（MVP1/MVP2）见 [ROADMAP.md](./ROADMAP.md)。
+MVP1 已完成，进展详见 [ROADMAP.md](./ROADMAP.md)。

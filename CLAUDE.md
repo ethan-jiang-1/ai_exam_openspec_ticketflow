@@ -13,7 +13,7 @@ SDLC 遵循 OpenSpec：propose → design → specs → tasks → apply → arch
 ├── packages/
 │   └── shared/          共享类型（@ticketflow/shared）
 ├── openspec/
-│   ├── specs/           13 个能力 spec
+│   ├── specs/           15 个能力 spec
 │   └── changes/archive/ 已归档 change
 ├── scripts/             辅助脚本（冒烟/诊断/调查，见 scripts/README.md）
 ├── data/                SQLite 数据文件
@@ -27,7 +27,7 @@ SDLC 遵循 OpenSpec：propose → design → specs → tasks → apply → arch
 | `pnpm-workspace.yaml` | 工作区配置 |
 | `tsconfig.base.json` | 共享 TS 配置 |
 | `apps/server/src/app.ts` | 服务端 Hono app + 路由挂载 |
-| `apps/server/src/db/schema.ts` | Drizzle schema（users / tickets 表） |
+| `apps/server/src/db/schema.ts` | Drizzle schema（users / tickets / ticket_history 表） |
 | `apps/server/src/routes/auth.ts` | 登录/登出/会话 API |
 | `apps/server/src/routes/tickets.ts` | 工单 CRUD API |
 | `apps/server/src/routes/admin.ts` | 用户管理 API |
