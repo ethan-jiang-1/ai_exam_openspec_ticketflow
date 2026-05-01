@@ -83,7 +83,7 @@
 - 紧急（high）：`strokeColor` 使用 `PRIORITY_COLORS.high`，值来自 priorityDistribution.high
 - 中等（medium）：`strokeColor` 使用 `PRIORITY_COLORS.medium`，值来自 priorityDistribution.medium
 - 低（low）：`strokeColor` 使用 `PRIORITY_COLORS.low`，值来自 priorityDistribution.low
-每条 Progress 的 `percent` = 该优先级的 pending 数量 / pending 总数 * 100。
+每条 Progress 的 `percent` = 该优先级的 pending 数量 / pending 总数 * 100（pending 总数为 0 时所有进度条显示 0）。
 
 **行 3 — 效率指标（3 个）：**
 使用 `Row`/`Col`（`xs={12} sm={8}`），3 个 antd `Card`（`size="small"`），内嵌 `Statistic`，标题分别为 "平均响应时间"、"平均处理时间"、"本周改派次数"，值来自 API efficiency 字段。avgResponseMinutes 和 avgProcessMinutes 后缀为 "分钟"。
@@ -92,11 +92,11 @@
 antd `Table`（`pagination={false}`），列为：
 - 完成者（displayName）
 - 待处理 — 使用 `render` 返回 `<Progress percent={...} size="small" />` + 数字，`strokeColor` 使用 `STATUS_COLORS.assigned`。percent = assignedCount / totalAssigned * 100（totalAssigned 为所有完成者 assignedCount 之和，为 0 时显示 0）
-- 处理中 — `<Progress percent={...} size="small" />` + 数字，`strokeColor="blue"`（`STATUS_COLORS.in_progress` 值为 `processing` 不适用于 Progress strokeColor）
+- 处理中 — `<Progress percent={...} size="small" />` + 数字，`strokeColor="blue"`（`STATUS_COLORS.in_progress` 值为 `processing` 不适用于 Progress strokeColor）。percent = inProgressCount / totalInProgress * 100（totalInProgress 为所有完成者 inProgressCount 之和，为 0 时显示 0）
 - 本周完成 — 纯数字（completedThisWeekCount）
 
 **行 5 — 最近动态：**
-antd `Timeline` + `Tag` 展示 recentActivity（最近 10 条），每条显示时间（HH:mm 格式）、actor、action 描述文本、工单标题（ticketTitle 可点击链接，点击后弹出 `TicketDetailDrawer`）、状态 Tag（使用 STATUS_COLORS）。
+antd `Timeline` + `Tag` 展示 recentActivity（最近 10 条），每条显示时间（HH:mm 格式）、actor、action 描述文本、工单标题（ticketTitle 可点击链接，点击后调用 `getTicket(ticketId)` 获取完整工单数据，然后弹出 `TicketDetailDrawer`）、状态 Tag（使用 STATUS_COLORS）。
 Timeline dot `color` 按 action 类型区分：
 - `created` → `color="blue"`
 - `assigned` → `color` 使用 `STATUS_COLORS.assigned`

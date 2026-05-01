@@ -4,7 +4,7 @@ MVP1 缺少全局视角：管理员和调度者无法快速了解工单系统的
 
 ## What Changes
 
-- 新增 `GET /api/dashboard` API，返回 overview（总量/本周新建/本周完成/待处理/优先级分布/完成率）、efficiency（平均响应时间/平均处理时间/改派次数）、workload（按完成者负载）、recentActivity（最近 10 条操作动态，含工单标题）
+- 新增 `GET /api/dashboard` API，返回 overview（总量/本周新建/本周完成/待处理/优先级分布）、efficiency（平均响应时间/平均处理时间/改派次数）、workload（按完成者负载）、recentActivity（最近 10 条操作动态，含工单标题）。完成率由前端根据 `completedThisWeek / createdThisWeek` 计算。
 - 新增 `/dashboard` 前端页面，单页滚动布局，使用 antd 控件：
   - 第一行：4 个 `Card` + `Statistic`（数字跳动效果）— 工单总数/本周新建/本周完成/待处理
   - 第二行：`Progress type="dashboard"` 仪表盘（完成率）+ 3 条 `Progress` 条（优先级分布，高/中/低三色）

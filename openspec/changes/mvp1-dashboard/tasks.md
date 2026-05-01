@@ -48,7 +48,7 @@
   - 行 1: 4 个 Card+Statistic（数字跳动效果）— total/createdThisWeek/completedThisWeek/pending
   - 行 2: Progress type="dashboard"（完成率仪表盘）+ 3 条 Progress 条（优先级分布，颜色使用 PRIORITY_COLORS 常量）
   - 行 3: 3 个 Card+Statistic（效率指标）— avgResponseMinutes/avgProcessMinutes/reassignCount
-  - 行 4: Table（含 Progress 条嵌入待处理/处理中列，pagination=false，颜色使用 STATUS_COLORS 常量）
+  - 行 4: Table（含 Progress 条嵌入待处理/处理中列，pagination=false；待处理用 STATUS_COLORS.assigned，处理中用 blue（因 STATUS_COLORS.in_progress='processing' 不可用于 strokeColor））
   - 行 5: Timeline（最近 10 条动态，dot 颜色按 action 区分，颜色使用 STATUS_COLORS 常量；ticketTitle 可点击弹出 TicketDetailDrawer）
   - loading 状态（Spin）+ 错误处理（message.error）
 - [ ] 3.4 修改 `apps/web/src/components/Layout.tsx` Header 添加 "数据面板" 导航按钮 [DSH-003][WF-002]

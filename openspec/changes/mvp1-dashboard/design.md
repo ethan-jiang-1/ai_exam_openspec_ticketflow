@@ -236,4 +236,4 @@ const weekStart = monday.toISOString()
 1. **统计是否需要按时间范围筛选（本周/本月/自定义）？** — 当前设计固定为「本周」，如有需要可在后续 change 中扩展 `?range=week|month|all` 参数。
 2. **workload 是否需要显示所有完成者还是仅活跃完成者？** — 当前返回所有 role=completer 的用户，即使负载为 0。这样管理者可以看到完整人力列表。
 3. **Dashboard 是否需要自动刷新？** — 当前设计为静态页面加载，不做轮询。如果有实时监控需求，后续可加 `setInterval` 轮询或 WebSocket 推送。
-4. **Progress 条颜色与共享常量如何对齐？** — `PRIORITY_COLORS` 和 `STATUS_COLORS` 是为 antd Tag 设计的，值是命名颜色（'red', 'green' 等）和特殊值（'processing'）。Progress 组件的 `strokeColor` 接受命名颜色但 'processing' 无效。是否需要新增 dashboard 专用颜色常量到 shared 包，还是在页面内处理映射？
+4. **Progress 条颜色与共享常量如何对齐？** — **已决策**：优先使用 `PRIORITY_COLORS` 和 `STATUS_COLORS`，仅 `STATUS_COLORS.in_progress`（值为 `processing`）例外，在组件内映射为 `"blue"`。MVP1 不引入新 shared 颜色常量，后续如有更多专用颜色需求再提取。
