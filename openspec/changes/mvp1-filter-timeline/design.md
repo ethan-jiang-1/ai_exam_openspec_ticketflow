@@ -22,7 +22,7 @@
 
 ### Decision 1: 前端分页 vs 服务端分页
 
-**选择**: 使用 antd Table 内置的前端分页（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100', '200'] }}`）。
+**选择**: 使用 antd Table 内置的前端分页（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}`）。
 
 **理由**: MVP 阶段工单量小（< 500 条），前端分页零 API 改造成本。服务端分页留给 MVP2。
 
@@ -81,4 +81,4 @@ apps/web/src/components/
 ## Open Questions
 
 1. 调度者和完成者也需要看到 Timeline 吗？还是仅提交者？当前设计 Timeline 在三个工作台 Drawer 均可显示（数据来源是 `ticket.id` 通用接口），但可加 `showTimeline` prop 控制。
-2. ~~分页 pageSize 默认 20 是否合适？~~ 已确定：默认 10，选项 10/20/50/100/200，通过 `showSizeChanger` 支持
+2. ~~分页 pageSize 默认 20 是否合适？~~ 已确定：默认 10，选项 5/10/20/50/100/200，通过 `showSizeChanger` 支持

@@ -168,7 +168,7 @@ export default function DispatcherWorkbench() {
           dataSource={displayTickets}
           columns={columns}
           rowKey="id"
-          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100', '200'] }}
+          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}
           scroll={{ x: 'max-content' }}
         />
       )}
