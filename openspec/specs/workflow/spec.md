@@ -40,6 +40,14 @@
 
 `/workbench/submitter` SHALL 显示提交者工作台，包含：antd `Form` 创建工单表单（居中布局 `maxWidth: 480px`，`Form.Item` + `Input` 标题（`maxLength={200}`、`showCount`、`rules: [{ required: true }, { max: 200 }]`）+ `Input.TextArea` 描述（`maxLength={2000}`、`showCount`、`rules: [{ max: 2000 }]`）+ `Form.Item` + `Select` 优先级（选项 low/medium/high，`initialValue="medium"`）+ `Form.Item` + `DatePicker` 截止日期 + antd `Button` 提交按钮）和 antd `Table` 工单列表（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}`，"创建时间"列 `responsive: ['lg']`）。状态列 SHALL 配置 antd Table column `filters`，选项为 submitted / assigned / in_progress / completed（使用 `STATUS_LABELS` 中文映射），`filterSearch: false`，`onFilter` 通过 status 值匹配。创建工单时 SHALL 调用 `createTicket({ title, description, priority, dueDate })`，不传 `createdBy`（后端从 auth context 获取）。工单列表 SHALL 仅显示 `createdBy === user.username` 的工单（通过 `getTickets()` 获取全部后在客户端过滤）。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出共享 `TicketDetailDrawer` 组件（接收 `ticket`、`open`、`onClose`、`showTimeline=true` props），展示工单详情和处理时间线。
 
+工单列表 SHALL 新增操作列（`fixed: 'right'`），对于 status=`submitted` 的工单显示 antd `Button` "编辑"，点击后弹出 antd `Modal` 编辑表单，包含以下可编辑字段：
+- `Form.Item` + `Input` 标题（`maxLength={200}`、`showCount`、`rules: [{ required: true }, { max: 200 }]`）
+- `Form.Item` + `Input.TextArea` 描述（`maxLength={2000}`、`showCount`、`rules: [{ max: 2000 }]`）
+- `Form.Item` + `Select` 优先级（选项 low/medium/high）
+- `Form.Item` + `DatePicker` 截止日期
+
+Modal 确认后 SHALL 调用 `PATCH /api/tickets/:id`，body 包含所有变更字段。成功后 SHALL 关闭 Modal 并刷新列表。
+
 #### Scenario: 创建工单不传 createdBy
 
 - **WHEN** submitter 用户在 antd Form 中填写 title 和 description，点击提交
@@ -75,6 +83,16 @@
 - **WHEN** 提交者在工单列表的状态列标题点击筛选下拉，选择 "已指派"
 - **THEN** antd Table SHALL 仅显示 `status === 'assigned'` 的工单
 
+#### Scenario: submitted 工单可编辑
+
+- **WHEN** 提交者看到一条 status=`submitted` 的工单，点击 "编辑" 按钮，在 Modal 中修改标题为新值，点击确认
+- **THEN** SHALL 调用 `PATCH /api/tickets/:id`，body 包含 `{ title: "新值" }`，成功后 SHALL 关闭 Modal 并刷新列表
+
+#### Scenario: 编辑 API 失败时保留已输入内容
+
+- **WHEN** 提交者在编辑 Modal 中修改了标题，但 `PATCH /api/tickets/:id` 返回错误
+- **THEN** Modal SHALL 保持打开状态，已输入的文本不被清空，并显示 API 错误提示
+
 ### Requirement: WF-004 调度者工作台
 
 `/workbench/dispatcher` SHALL 显示所有未完成状态的工单（通过 `getTickets()` 获取全部后在客户端按 `status !== 'completed'` 过滤），使用 antd `Table`（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}`、`scroll={{ x: 'max-content' }}`）展示。状态列 SHALL 配置 antd Table column `filters`，选项为 submitted / assigned / in_progress / completed（使用 `STATUS_LABELS` 中文映射），`filterSearch: false`，`onFilter` 通过 status 值匹配。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出共享 `TicketDetailDrawer` 组件（接收 `ticket`、`open`、`onClose`、`showTimeline=true` props），展示工单详情和处理时间线。"创建者"和"创建时间"列 SHALL 设置 `responsive: ['lg']`。
@@ -82,6 +100,8 @@
 - `submitted` 状态的工单：操作列显示 antd `Select`（选项为 completer 角色用户）和 antd `Button` "指派"
 - `assigned` 状态的工单：操作列显示 antd `Select`（选项为 completer 角色用户）和 antd `Button` "改派"
 - `in_progress` 状态的工单：操作列显示文本 "处理中（已指派给 {assignedTo}）"，无操作按钮
+
+工单详情 Drawer 底部 SHALL 包含备注区域：antd `Input.TextArea`（`maxLength={2000}`、`showCount`、`rows={3}`）+ antd `Button` "添加备注"。提交后 SHALL 调用 `POST /api/tickets/:id/comments`，成功后清空输入并刷新 Timeline。
 
 #### Scenario: 指派工单
 
@@ -128,6 +148,16 @@
 - **WHEN** 调度者有 25 条未完成工单
 - **THEN** antd Table SHALL 默认显示第 1 页（10 条），底部显示分页器
 
+#### Scenario: 添加备注
+
+- **WHEN** 调度者在工单详情 Drawer 的备注区域输入文本 "需要紧急处理"，点击 "添加备注"
+- **THEN** SHALL 调用 `POST /api/tickets/:id/comments`，body 为 `{ "comment": "需要紧急处理" }`，成功后清空输入并刷新 Timeline
+
+#### Scenario: 备注 API 失败时保留已输入内容
+
+- **WHEN** 调度者在备注区域输入文本后提交，但 `POST /api/tickets/:id/comments` 返回错误
+- **THEN** 备注输入框中已输入的文本不被清空，并显示 API 错误提示
+
 #### Scenario: 状态列筛选
 
 - **WHEN** 调度者在工单列表的状态列标题点击筛选下拉，选择 "待指派"
@@ -136,6 +166,8 @@
 ### Requirement: WF-005 完成者工作台
 
 `/workbench/completer` SHALL 显示所有 `assignedTo === user.username` 且状态为 `assigned` 或 `in_progress` 的工单（通过 `getTickets()` 获取全部后在客户端过滤），使用 antd `Table`（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}`、`scroll={{ x: 'max-content' }}`）展示。状态列 SHALL 配置 antd Table column `filters`，选项为 assigned / in_progress / completed（使用 `STATUS_LABELS` 中文映射），`filterSearch: false`，`onFilter` 通过 status 值匹配。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出共享 `TicketDetailDrawer` 组件（接收 `ticket`、`open`、`onClose`、`showTimeline=true` props），展示工单详情和处理时间线。`assigned` 状态的工单操作列有 antd `Button` "开始处理"，`in_progress` 状态的工单操作列有 antd `Button` "完成"。"创建者"和"创建时间"列 SHALL 设置 `responsive: ['lg']`。
+
+工单详情 Drawer 底部 SHALL 包含备注区域：antd `Input.TextArea`（`maxLength={2000}`、`showCount`、`rows={3}`）+ antd `Button` "添加备注"。提交后 SHALL 调用 `POST /api/tickets/:id/comments`，成功后清空输入并刷新 Timeline。
 
 #### Scenario: 开始处理工单
 
@@ -166,6 +198,16 @@
 
 - **WHEN** 完成者有 25 条待处理工单
 - **THEN** antd Table SHALL 默认显示第 1 页（10 条），底部显示分页器
+
+#### Scenario: 添加备注
+
+- **WHEN** 完成者在工单详情 Drawer 的备注区域输入文本 "问题已定位，正在修复"，点击 "添加备注"
+- **THEN** SHALL 调用 `POST /api/tickets/:id/comments`，body 为 `{ "comment": "问题已定位，正在修复" }`，成功后清空输入并刷新 Timeline
+
+#### Scenario: 备注 API 失败时保留已输入内容
+
+- **WHEN** 完成者在备注区域输入文本后提交，但 `POST /api/tickets/:id/comments` 返回错误
+- **THEN** 备注输入框中已输入的文本不被清空，并显示 API 错误提示
 
 #### Scenario: 状态列筛选
 
