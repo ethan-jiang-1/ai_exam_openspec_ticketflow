@@ -68,6 +68,22 @@ TicketFlow 已有 `ticket_history` 表记录工单的每一次状态变更（cre
 
 **理由：** `ticket_history` 表记录了每次操作的 actor 和 timestamp，通过 Drizzle 查询按 ticket_id 分组取 min(created_at) 可得到首次指派/完成时间。
 
+### Decision 5.1: 效率指标查询策略
+
+**avgResponseMinutes 查询策略：**
+1. 子查询 A：从 `ticket_history` 中按 ticket_id 分组，取 action='assigned' 的最小 created_at（首次指派时间）
+2. 子查询 B：从 `tickets` 表取 id 和 created_at
+3. JOIN A 和 B，计算每条工单的 `(首次指派时间 - 创建时间)` 差值（分钟），求 AVG
+4. 无指派记录或子查询返回空时，结果为 0（使用 COALESCE）
+
+**avgProcessMinutes 查询策略：**
+1. 子查询 A：从 `ticket_history` 中按 ticket_id 分组，取 action='assigned' 的最小 created_at（首次指派时间）
+2. 子查询 C：从 `ticket_history` 中按 ticket_id 分组，取 action='completed' 的最小 created_at（完成时间）
+3. JOIN A 和 C（通过 ticket_id），计算每条工单的 `(完成时间 - 首次指派时间)` 差值（分钟），求 AVG
+4. 无完成记录或子查询返回空时，结果为 0
+
+以上子查询均通过 Drizzle `sql<>` 模板实现，在 SQL 层面完成聚合，不在应用层拉取全量数据后计算。
+
 ### Decision 6: 不新增 npm 依赖，用 antd 内置控件实现可视化
 
 **选择：** 前端仅使用 antd 内置控件：`Statistic`（数字跳动）、`Progress`（仪表盘 + 条形进度条）、`Table`（表格嵌入进度条）、`Timeline`（时间线）、`Tag`（状态标签）、`Card`、`Row`、`Col`。
@@ -155,6 +171,7 @@ openspec/
       "ticketTitle": "修复登录页样式",
       "action": "completed",
       "actor": "completer",
+      "actorDisplayName": "完成者",
       "toStatus": "completed",
       "createdAt": "2026-05-01T10:30:00.000Z"
     }
@@ -164,7 +181,7 @@ openspec/
 
 **数据来源：**
 - `overview.priorityDistribution`: `tickets` 表按 priority 分组 COUNT（仅未完成工单 status != 'completed'）
-- `recentActivity`: `ticket_history` 表 JOIN `tickets` 表（获取 ticketTitle），按 created_at DESC LIMIT 10
+- `recentActivity`: `ticket_history` 表 JOIN `tickets` 表（获取 ticketTitle）JOIN `users` 表（获取 actorDisplayName = users.display_name WHERE users.username = ticket_history.actor），按 created_at DESC LIMIT 10
 
 DB 列名 ↔ JS 属性名映射（遵循项目命名约定）：
 | DB 列名 | JS 属性名 |
@@ -199,6 +216,7 @@ DB 列名 ↔ JS 属性名映射（遵循项目命名约定）：
 │  张三    │ ████░░ 3(37%)       │ ██░░░ 1(25%)         │    5   │
 │  pagination={false}                                           │
 │  Progress 颜色: assignedCount=STATUS_COLORS.assigned, inProgressCount="blue"（STATUS_COLORS.in_progress='processing' 不可用于 Progress strokeColor）│
+│  注：percent 分母（totalAssigned/totalInProgress）由前端通过 reduce 遍历 workload 数组求和计算，分母为 0 时 Progress percent 显示 0│
 ├──────────────────────────────────────────────────────────────┤
 │  Row 5: Timeline（最近动态，最近 10 条）                       │
 │  ● 10:30 完成者 完成了工单 "修复登录页样式"  [completed Tag]   │
@@ -222,7 +240,7 @@ const weekStart = monday.toISOString()
 
 ## Test Strategy
 
-- **API 集成测试**: 使用内存 SQLite（`:memory:`）+ Hono `app.request()` 发请求。`beforeEach` 通过 Drizzle ORM API 清空 tickets 和 ticket_history 表，通过 `POST /api/auth/login` 获取 session cookie。测试覆盖：200（admin + dispatcher）、403（submitter + completer）、401（未登录）、零值边界、平均响应时间计算、recentActivity 包含 ticketTitle。
+- **API 集成测试**: 使用内存 SQLite（`:memory:`）+ Hono `app.request()` 发请求。`beforeEach` 通过 Drizzle ORM API 清空 tickets 和 ticket_history 表，通过 `POST /api/auth/login` 获取 session cookie。测试覆盖：200（admin + dispatcher）、403（submitter + completer）、401（未登录）、零值边界、平均响应时间计算、recentActivity 包含 ticketTitle 和 actorDisplayName。
 - **前端组件测试**: 使用 vitest + @testing-library/react，mock 全局 `fetch` 模拟 `GET /api/dashboard` 响应。AuthContext 通过 mock `AuthProvider`（设置 `user.role` 为 admin/dispatcher/submitter/completer）测试不同角色的导航可见性和路由重定向。测试覆盖：KPI 数字渲染、Progress 仪表盘、优先级 Progress 条、Table + Progress 条、Timeline 渲染（含 ticketTitle 点击弹出 Drawer）、API 失败错误提示、角色导航可见性、路由重定向。
 
 ## Risks / Trade-offs

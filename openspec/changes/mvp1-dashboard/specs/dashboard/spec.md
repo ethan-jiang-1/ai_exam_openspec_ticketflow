@@ -14,14 +14,14 @@
 - efficiency.avgProcessMinutes: 对已完成工单，计算「完成时间 - 首次指派时间」的平均分钟数。完成时间 = ticket_history 中 action='completed' 且 ticket_id 对应的最小 created_at
 - efficiency.reassignCount: `ticket_history` 表 COUNT(*) WHERE action='reassigned' AND created_at >= 本周一 00:00:00
 - workload: 从 `users` 表（WHERE role='completer'）出发 LEFT JOIN `tickets` 表和 `ticket_history` 表，确保零负载用户也出现在结果中（各项计数为 0）。每人统计 assignedCount（tickets WHERE assigned_to=username AND status='assigned'）、inProgressCount（tickets WHERE assigned_to=username AND status='in_progress'）、completedThisWeekCount（ticket_history 表 LEFT JOIN tickets ON ticket_history.ticket_id = tickets.id，WHERE ticket_history.action='completed' AND tickets.assigned_to=username AND ticket_history.created_at >= 本周一 00:00:00，按 ticket_id 去重）
-- recentActivity: `ticket_history` 表 JOIN `tickets` 表（获取 ticketTitle = tickets.title），ORDER BY ticket_history.created_at DESC LIMIT 10，每条包含 id、ticketId、ticketTitle、action、actor、toStatus、createdAt
+- recentActivity: `ticket_history` 表 JOIN `tickets` 表（获取 ticketTitle = tickets.title）JOIN `users` 表（获取 actorDisplayName = users.display_name WHERE users.username = ticket_history.actor），ORDER BY ticket_history.created_at DESC LIMIT 10，每条包含 id、ticketId、ticketTitle、action、actor、actorDisplayName、toStatus、createdAt
 
 所有数据库操作 SHALL 通过 Drizzle ORM API 完成。对于 Drizzle query builder 无法直接表达的聚合（如 COUNT DISTINCT、关联子查询），允许使用 Drizzle `sql<>` 模板字面量，但禁止拼接用户输入或书写完整独立 SQL 语句。
 
 #### Scenario: admin 获取 dashboard 数据
 
 - **WHEN** admin 用户已登录，发送 `GET /api/dashboard`
-- **THEN** 返回 200，body 包含 `{ overview: { total, createdThisWeek, completedThisWeek, pending, priorityDistribution: { high, medium, low } }, efficiency: { avgResponseMinutes, avgProcessMinutes, reassignCount }, workload: [{ username, displayName, assignedCount, inProgressCount, completedThisWeekCount }], recentActivity: [{ id, ticketId, ticketTitle, action, actor, toStatus, createdAt }] }`
+- **THEN** 返回 200，body 包含 `{ overview: { total, createdThisWeek, completedThisWeek, pending, priorityDistribution: { high, medium, low } }, efficiency: { avgResponseMinutes, avgProcessMinutes, reassignCount }, workload: [{ username, displayName, assignedCount, inProgressCount, completedThisWeekCount }], recentActivity: [{ id, ticketId, ticketTitle, action, actor, actorDisplayName, toStatus, createdAt }] }`
 
 #### Scenario: dispatcher 获取 dashboard 数据
 
@@ -61,7 +61,7 @@
 #### Scenario: recentActivity 包含工单标题
 
 - **WHEN** 工单 T1（title="修复登录页样式"）有一条 completed 记录（actor="completer"），admin 发送 `GET /api/dashboard`
-- **THEN** recentActivity 数组第一条 SHALL 包含 `ticketTitle: "修复登录页样式"`、`action: "completed"`、`actor: "completer"`
+- **THEN** recentActivity 数组第一条 SHALL 包含 `ticketTitle: "修复登录页样式"`、`action: "completed"`、`actor: "completer"`、`actorDisplayName: "完成者"`
 
 #### Scenario: 优先级分布统计正确
 
@@ -79,7 +79,7 @@
 
 **行 2 — 完成率仪表盘 + 优先级分布：**
 使用 `Row`/`Col`，左侧 `Col sm={8}` 放 antd `Card`，内嵌 `Progress type="dashboard" percent={completionRate}`，标题 "完成率"。完成率 = `completedThisWeek / createdThisWeek * 100`，createdThisWeek 为 0 时显示 0。
-右侧 `Col sm={16}` 放 antd `Card`，标题 "待处理工单优先级分布"，内嵌 3 条 `Progress percent={...} showInfo={true}`：
+右侧 `Col sm={16}` 放 antd `Card`，标题 "待处理工单优先级分布"，内嵌 3 条 `Progress percent={percent} format={() => count}`（`percent` 控制进度条长度，`format` 显示原始数量而非百分比）：
 - 紧急（high）：`strokeColor` 使用 `PRIORITY_COLORS.high`，值来自 priorityDistribution.high
 - 中等（medium）：`strokeColor` 使用 `PRIORITY_COLORS.medium`，值来自 priorityDistribution.medium
 - 低（low）：`strokeColor` 使用 `PRIORITY_COLORS.low`，值来自 priorityDistribution.low
@@ -91,12 +91,12 @@
 **行 4 — 负载表格：**
 antd `Table`（`pagination={false}`），列为：
 - 完成者（displayName）
-- 待处理 — 使用 `render` 返回 `<Progress percent={...} size="small" />` + 数字，`strokeColor` 使用 `STATUS_COLORS.assigned`。percent = assignedCount / totalAssigned * 100（totalAssigned 为所有完成者 assignedCount 之和，为 0 时显示 0）
-- 处理中 — `<Progress percent={...} size="small" />` + 数字，`strokeColor="blue"`（`STATUS_COLORS.in_progress` 值为 `processing` 不适用于 Progress strokeColor）。percent = inProgressCount / totalInProgress * 100（totalInProgress 为所有完成者 inProgressCount 之和，为 0 时显示 0）
+- 待处理 — 使用 `render` 返回 `<Progress percent={...} size="small" />` + 数字，`strokeColor` 使用 `STATUS_COLORS.assigned`。percent = assignedCount / totalAssigned * 100（totalAssigned 由前端通过 `reduce` 遍历 workload 数组求和计算，为 0 时显示 0）
+- 处理中 — `<Progress percent={...} size="small" />` + 数字，`strokeColor="blue"`（`STATUS_COLORS.in_progress` 值为 `processing` 不适用于 Progress strokeColor）。percent = inProgressCount / totalInProgress * 100（totalInProgress 由前端通过 `reduce` 遍历 workload 数组求和计算，为 0 时显示 0）
 - 本周完成 — 纯数字（completedThisWeekCount）
 
 **行 5 — 最近动态：**
-antd `Timeline` + `Tag` 展示 recentActivity（最近 10 条），每条显示时间（HH:mm 格式）、actor、action 描述文本、工单标题（ticketTitle 可点击链接，点击后调用 `getTicket(ticketId)` 获取完整工单数据，然后弹出 `TicketDetailDrawer`）、状态 Tag（使用 STATUS_COLORS）。
+antd `Timeline` + `Tag` 展示 recentActivity（最近 10 条），每条显示时间（HH:mm 格式）、actorDisplayName（中文显示名）、action 描述文本、工单标题（ticketTitle 可点击链接，点击后调用 `getTicket(ticketId)` 获取完整工单数据，然后弹出 `TicketDetailDrawer`）、状态 Tag（使用 STATUS_COLORS）。
 Timeline dot `color` 按 action 类型区分：
 - `created` → `color="blue"`
 - `assigned` → `color` 使用 `STATUS_COLORS.assigned`

@@ -12,13 +12,16 @@
   - 无工单但存在用户时返回零值（含 priorityDistribution 全 0、recentActivity 为空数组）
   - 有工单但无历史记录时效率指标为 0（不产生 NaN）
   - 平均响应时间计算正确
-  - recentActivity 包含 ticketTitle
+  - recentActivity 包含 ticketTitle 和 actorDisplayName
   - 优先级分布统计正确（仅未完成工单）
 - [ ] 1.2 实现 `apps/server/src/routes/dashboard.ts` GET /api/dashboard handler [DSH-001]
   - 通过 Drizzle ORM 查询 overview（含 priorityDistribution）
-  - 通过 Drizzle ORM 查询 efficiency（avgResponseMinutes/avgProcessMinutes 使用 Drizzle sql<> 子查询；reassignCount 统计本周改派次数）
+  - 通过 Drizzle ORM 查询 efficiency：
+    - avgResponseMinutes：子查询取 ticket_history action='assigned' 的 min(created_at) 作为首次指派时间，JOIN tickets 的 created_at，差值求 AVG，空值返回 0
+    - avgProcessMinutes：子查询取 action='completed' 的 min(created_at) 作为完成时间，JOIN 首次指派时间子查询（同上），差值求 AVG，空值返回 0
+    - reassignCount：统计 ticket_history WHERE action='reassigned' AND created_at >= 本周一
   - 通过 Drizzle ORM 查询 workload（从 users LEFT JOIN tickets/ticket_history，确保零负载用户出现在结果中；completedThisWeekCount 从 ticket_history 统计并用 COUNT DISTINCT 去重）
-  - 通过 Drizzle ORM JOIN ticket_history + tickets 查询 recentActivity（最近 10 条，含 ticketTitle）
+  - 通过 Drizzle ORM JOIN ticket_history + tickets + users 查询 recentActivity（最近 10 条，含 ticketTitle 和 actorDisplayName）
   - 角色权限检查：在 handler 中用 `if (user.role !== 'admin' && user.role !== 'dispatcher') return c.json({ error }, 403)`
   - 效率指标查询空集合时返回 0 而非 NaN。
 - [ ] 1.3 在 `apps/server/src/app.ts` 挂载 dashboard 路由 [DSH-001]
@@ -27,7 +30,15 @@
 
 **依赖**: 无（可并行开发）
 
-- [ ] 2.1 在 `packages/shared/src/dashboard-types.ts` 新增 `DashboardData` 类型（含 DashboardOverview、DashboardEfficiency、DashboardWorkloadItem、RecentActivityItem 接口；`RecentActivityItem.action` 复用已有的 `TicketHistoryAction` 类型），并在 `packages/shared/src/index.ts` 中 re-export [DSH-001][DSH-002]
+- [ ] 2.1 在 `packages/shared/src/dashboard-types.ts` 新增 `DashboardData` 类型，并在 `packages/shared/src/index.ts` 中 re-export [DSH-001][DSH-002]
+  ```ts
+  interface DashboardOverview { total: number; createdThisWeek: number; completedThisWeek: number; pending: number; priorityDistribution: { high: number; medium: number; low: number } }
+  interface DashboardEfficiency { avgResponseMinutes: number; avgProcessMinutes: number; reassignCount: number }
+  interface DashboardWorkloadItem { username: string; displayName: string; assignedCount: number; inProgressCount: number; completedThisWeekCount: number }
+  interface RecentActivityItem { id: string; ticketId: string; ticketTitle: string; action: TicketHistoryAction; actor: string; actorDisplayName: string; toStatus: string; createdAt: string }
+  interface DashboardData { overview: DashboardOverview; efficiency: DashboardEfficiency; workload: DashboardWorkloadItem[]; recentActivity: RecentActivityItem[] }
+  ```
+  注：`TicketHistoryAction` 从 `@ticketflow/shared` 已有类型导入，无需重复定义。
 
 ## 3. Dashboard 前端页面
 
@@ -51,6 +62,7 @@
   - 行 2: Progress type="dashboard"（完成率仪表盘）+ 3 条 Progress 条（优先级分布，颜色使用 PRIORITY_COLORS 常量）
   - 行 3: 3 个 Card+Statistic（效率指标）— avgResponseMinutes/avgProcessMinutes/reassignCount
   - 行 4: Table（含 Progress 条嵌入待处理/处理中列，pagination=false；待处理用 STATUS_COLORS.assigned，处理中用 blue（因 STATUS_COLORS.in_progress='processing' 不可用于 strokeColor））
+    - 在渲染 Table 前，先通过 `reduce` 遍历 workload 数组计算 totalAssigned 和 totalInProgress（所有完成者 assignedCount/inProgressCount 之和），用于 Progress percent 分母。分母为 0 时 percent 显示 0
   - 行 5: Timeline（最近 10 条动态，dot 颜色按 action 区分，颜色使用 STATUS_COLORS 常量；ticketTitle 可点击弹出 TicketDetailDrawer）
   - loading 状态（Spin）+ 错误处理（message.error）
 - [ ] 3.4 修改 `apps/web/src/components/Layout.tsx` Header 添加 "数据面板" 导航按钮 [DSH-003][WF-002]
