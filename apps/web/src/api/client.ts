@@ -1,4 +1,4 @@
-import type { Ticket, Priority, User, TicketHistoryEvent } from '@ticketflow/shared'
+import type { Ticket, Priority, User, TicketHistoryEvent, DashboardData } from '@ticketflow/shared'
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -142,4 +142,9 @@ export async function deleteUser(username: string): Promise<{ ok: boolean }> {
     credentials: 'include',
   })
   return handleResponse<{ ok: boolean }>(res)
+}
+
+export async function getDashboard(): Promise<DashboardData> {
+  const res = await fetch('/api/dashboard', { credentials: 'include' })
+  return handleResponse<DashboardData>(res)
 }

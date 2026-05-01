@@ -6,6 +6,7 @@ import health from './routes/health'
 import ticketsRoute from './routes/tickets'
 import authRoute from './routes/auth'
 import adminRoute from './routes/admin'
+import dashboardRoute from './routes/dashboard'
 import { sessionMiddleware } from './middleware/auth'
 import type { AuthVariables } from './db/types'
 
@@ -21,6 +22,7 @@ export function createApp<E extends AuthVariables>(dbMiddleware: MiddlewareHandl
   app.route('/api/auth', authRoute)
   app.route('/api/tickets', ticketsRoute)
   app.route('/api/admin', adminRoute)
+  app.route('/api/dashboard', dashboardRoute)
 
   app.onError((err, c) => {
     console.error('Unhandled error:', err)

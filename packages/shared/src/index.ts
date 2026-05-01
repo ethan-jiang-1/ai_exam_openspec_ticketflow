@@ -9,3 +9,4 @@ export const APP_INFO = {
 } as const satisfies AppInfo
 
 export * from './ticket-types'
+export * from './dashboard-types'

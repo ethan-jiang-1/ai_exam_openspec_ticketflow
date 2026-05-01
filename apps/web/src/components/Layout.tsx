@@ -43,6 +43,11 @@ export default function Layout() {
           )}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {(role === 'admin' || role === 'dispatcher') && (
+            <Button type="link" size="small" onClick={() => navigate('/dashboard')}>
+              数据面板
+            </Button>
+          )}
           <span style={{ fontWeight: 500 }}>{user?.displayName}</span>
           <Button size="small" onClick={handleLogout}>
             退出
