@@ -124,4 +124,43 @@ describe('API client', () => {
 
     await expect(getTicket('nonexistent')).rejects.toThrow('Not found')
   })
+
+  it('dispatches auth:expired on 401 when NOT on login page', async () => {
+    vi.stubGlobal('location', { pathname: '/workbench/submitter' })
+    const spy = vi.spyOn(window, 'dispatchEvent')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ error: '未登录' }),
+    } as Response)
+
+    await expect(getTickets()).rejects.toThrow('未登录')
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ type: 'auth:expired' }))
+  })
+
+  it('does NOT dispatch auth:expired on 401 when on /login page', async () => {
+    vi.stubGlobal('location', { pathname: '/login' })
+    const spy = vi.spyOn(window, 'dispatchEvent')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ error: '未登录' }),
+    } as Response)
+
+    await expect(getUsers()).rejects.toThrow('未登录')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('does NOT dispatch auth:expired on 401 when on /login-dev page', async () => {
+    vi.stubGlobal('location', { pathname: '/login-dev' })
+    const spy = vi.spyOn(window, 'dispatchEvent')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ error: '未登录' }),
+    } as Response)
+
+    await expect(getUsers()).rejects.toThrow('未登录')
+    expect(spy).not.toHaveBeenCalled()
+  })
 })

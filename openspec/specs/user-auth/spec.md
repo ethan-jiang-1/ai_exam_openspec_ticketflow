@@ -200,15 +200,15 @@ Session ID SHALL 通过 `crypto.randomUUID()` 生成。
 
 1. `sessionMiddleware`：
    - 从 cookie 读取 `ticketflow-session`
-   - **若 cookie 存在**但 `sessionStore.get()` 返回 `undefined`（session 过期/不存在）→ SHALL 返回 401 `{ error: "会话已过期，请重新登录" }`
    - 若 cookie 不存在 → 设置 `c.set('user', null)`，调用 `next()`
+   - 若 cookie 存在但 `sessionStore.get()` 返回 `undefined`（session 过期/不存在）→ 设置 `c.set('user', null)` + `c.set('sessionExpired', true)`，调用 `next()`，**SHALL NOT 返回 401**
    - 若 session 有效 → 查 users 表获取用户信息，设置 `c.set('user', user)`
-2. `requireAuth`：检查 `c.get('user')` 是否存在，不存在则返回 401 `{ error: "未登录" }`。
+2. `requireAuth`：检查 `c.get('user')` 是否存在，若不存在则检查 `c.get('sessionExpired')`：为 `true` 时返回 401 `{ error: "会话已过期，请重新登录" }`，否则返回 401 `{ error: "未登录" }`。
 
-`apps/server/src/db/types.ts` SHALL 扩展 Hono Variables 类型，新增 `user` 字段：
+`apps/server/src/db/types.ts` SHALL 扩展 Hono Variables 类型，新增 `user` 字段和 `sessionExpired` 字段：
 
 ```typescript
-export type AuthVariables = { Variables: { db: Db; user: User | null } }
+export type AuthVariables = { Variables: { db: Db; user: User | null; sessionExpired: boolean | undefined } }
 ```
 
 #### Scenario: 有效 session 注入用户
@@ -221,20 +221,30 @@ export type AuthVariables = { Variables: { db: Db; user: User | null } }
 - **WHEN** 请求不携带 session cookie
 - **THEN** `c.get('user')` SHALL 为 `null`，不返回 401
 
-#### Scenario: session 过期返回 401
+#### Scenario: session 过期继续执行不返回 401
 
 - **WHEN** 请求携带的 session cookie 对应 session 已过期（`Date.now() - createdAt > ttlMs`）
-- **THEN** SHALL 返回 401 `{ error: "会话已过期，请重新登录" }`
+- **THEN** `c.get('user')` SHALL 为 `null`，`c.get('sessionExpired')` SHALL 为 `true`，请求 SHALL 继续执行（不返回 401）
 
-#### Scenario: session 不存在返回 401
+#### Scenario: session 不存在继续执行不返回 401
 
 - **WHEN** 请求携带不存在的 session ID cookie
-- **THEN** SHALL 返回 401 `{ error: "会话已过期，请重新登录" }`
+- **THEN** `c.get('user')` SHALL 为 `null`，`c.get('sessionExpired')` SHALL 为 `true`，请求 SHALL 继续执行（不返回 401）
 
-#### Scenario: requireAuth 拦截未认证请求
+#### Scenario: 公开路由携带过期 cookie 正常响应
 
-- **WHEN** 未认证请求（`c.get('user') === null`）经过 `requireAuth` 中间件
+- **WHEN** 请求携带过期 session cookie 访问 `GET /api/auth/users`
+- **THEN** SHALL 返回 200 和用户列表，不返回 401
+
+#### Scenario: requireAuth 拦截未认证请求（无 cookie）
+
+- **WHEN** 未认证请求（`c.get('user') === null` 且 `c.get('sessionExpired')` 非 `true`）经过 `requireAuth` 中间件
 - **THEN** SHALL 返回 401 `{ error: "未登录" }`
+
+#### Scenario: requireAuth 拦截过期 session 请求
+
+- **WHEN** 过期 session 请求（`c.get('user') === null` 且 `c.get('sessionExpired') === true`）经过 `requireAuth` 中间件
+- **THEN** SHALL 返回 401 `{ error: "会话已过期，请重新登录" }`
 
 ### Requirement: UA-009.5 CORS credentials 配置
 
@@ -709,7 +719,7 @@ SHALL NOT 依赖 Node.js 专属模块（如 `import from 'crypto'`），确保 N
 
 ### Requirement: UA-029 前端全局 401 拦截
 
-`apps/web/src/api/client.ts` SHALL 在任意 API 调用收到 401 响应时，`window.dispatchEvent(new CustomEvent('auth:expired'))`。
+`apps/web/src/api/client.ts` SHALL 在任意 API 调用收到 401 响应时，若当前页面路径不是 `/login` 或 `/login-dev`，则 `window.dispatchEvent(new CustomEvent('auth:expired'))`。在 `/login` 或 `/login-dev` 路径上收到 401 时 SHALL NOT 触发 `auth:expired` 事件。
 
 `apps/web/src/context/AuthContext.tsx` SHALL 在 `useEffect` 中监听 `auth:expired` 事件，收到后：
 1. 将 `user` 状态设为 `null`
@@ -720,8 +730,13 @@ CustomEvent SHALL 仅在 401 状态码时触发，其他错误状态码（400/40
 
 #### Scenario: API 返回 401 时触发 auth:expired 事件
 
-- **WHEN** 前端调用任意 API（如 `GET /api/auth/me`）返回 401
+- **WHEN** 前端在非登录页调用任意 API（如 `GET /api/auth/me`）返回 401
 - **THEN** SHALL dispatch `CustomEvent('auth:expired')` 到 `window`
+
+#### Scenario: 登录页上 API 返回 401 不触发 auth:expired
+
+- **WHEN** 前端在 `/login` 或 `/login-dev` 页面上调用 API 返回 401
+- **THEN** SHALL NOT dispatch `auth:expired` 事件
 
 #### Scenario: API 返回 403 时不触发 auth:expired
 

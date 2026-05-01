@@ -15,7 +15,10 @@ export async function sessionMiddleware(c: Context<AuthVariables>, next: Next) {
 
   const session = sessionStore.get(sessionId)
   if (!session) {
-    return c.json({ error: '会话已过期，请重新登录' }, 401)
+    c.set('user', null)
+    c.set('sessionExpired', true)
+    await next()
+    return
   }
 
   const db = c.get('db')
@@ -33,7 +36,8 @@ export async function sessionMiddleware(c: Context<AuthVariables>, next: Next) {
 export async function requireAuth(c: Context<AuthVariables>, next: Next) {
   const user = c.get('user')
   if (!user) {
-    return c.json({ error: '未登录' }, 401)
+    const msg = c.get('sessionExpired') ? '会话已过期，请重新登录' : '未登录'
+    return c.json({ error: msg }, 401)
   }
   await next()
 }

@@ -7,7 +7,7 @@ export type Db = BetterSQLite3Database | DrizzleD1Database
 
 export type DbVariables = { Variables: { db: Db } }
 
-export type AuthVariables = { Variables: { db: Db; user: User | null } }
+export type AuthVariables = { Variables: { db: Db; user: User | null; sessionExpired: boolean | undefined } }
 
 export type WorkerBindings = { Bindings: { DB: D1Database } }
 

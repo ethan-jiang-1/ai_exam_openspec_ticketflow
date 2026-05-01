@@ -2,7 +2,7 @@ import type { Ticket, Priority, User, TicketHistoryEvent } from '@ticketflow/sha
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !window.location.pathname.startsWith('/login')) {
       window.dispatchEvent(new CustomEvent('auth:expired'))
     }
     const err = await response.json()

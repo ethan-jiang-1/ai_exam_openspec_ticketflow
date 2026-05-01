@@ -45,6 +45,30 @@ describe('Auth API', () => {
       expect(body[0].displayName).toBe('Test User')
       expect(body[0].role).toBe('submitter')
     })
+
+    it('returns 200 with expired session cookie (public route)', async () => {
+      // Create a session, expire it, then access public route
+      vi.useFakeTimers()
+      const loginRes = await login()
+      const cookie = loginRes.headers.get('set-cookie')!
+
+      vi.advanceTimersByTime(25 * 60 * 60 * 1000)
+
+      const res = await app.request('/api/auth/users', {
+        headers: { Cookie: cookie },
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(1)
+      expect(body[0].username).toBe('testuser')
+    })
+
+    it('returns 200 with invalid session cookie (public route)', async () => {
+      const res = await app.request('/api/auth/users', {
+        headers: { Cookie: 'ticketflow-session=nonexistent-id' },
+      })
+      expect(res.status).toBe(200)
+    })
   })
 
   describe('POST /api/auth/login', () => {
