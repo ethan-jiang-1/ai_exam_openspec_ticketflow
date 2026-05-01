@@ -182,6 +182,30 @@ CREATE TABLE IF NOT EXISTS `users` (
 CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);
 ```
 
+```sql
+-- 0006: ticket_history 表
+CREATE TABLE IF NOT EXISTS `ticket_history` (
+  `id` text PRIMARY KEY NOT NULL,
+  `ticket_id` text NOT NULL,
+  `action` text NOT NULL,
+  `actor` text NOT NULL,
+  `from_status` text,
+  `to_status` text NOT NULL,
+  `details` text,
+  `created_at` text NOT NULL
+);
+```
+
+```sql
+-- 0007: ticket_history 按 ticket_id + 时间查询索引（时间线）
+CREATE INDEX IF NOT EXISTS `idx_ticket_history_ticket` ON `ticket_history` (`ticket_id`, `created_at`);
+```
+
+```sql
+-- 0008: ticket_history 按 action + 时间查询索引（Dashboard 聚合）
+CREATE INDEX IF NOT EXISTS `idx_ticket_history_action` ON `ticket_history` (`action`, `created_at`);
+```
+
 D1 中的系统表（正常，勿删）：
 - `d1_migration` — Wrangler 迁移版本追踪
 - `sqlite_sequence` — SQLite 内部 AUTOINCREMENT 追踪（我们未使用 AUTOINCREMENT，此表为空属正常）
@@ -215,6 +239,10 @@ D1 中的系统表（正常，勿删）：
 | `0003_add_priority.sql` | tickets 表新增 priority 列 | mvp-ticket-enrichment |
 | `0004_add_due_date.sql` | tickets 表新增 due_date 列 | mvp-ticket-enrichment |
 | `0005_add_password_hash.sql` | users 表新增 password_hash 列 | mvp-user-management |
+| `0006_create_ticket_history.sql` | ticket_history 表 | mvp1-ticket-history |
+| `0007_ticket_history_ticket_idx.sql` | idx_ticket_history_ticket (ticket_id, created_at) | mvp1-ticket-history |
+| `0008_ticket_history_action_idx.sql` | idx_ticket_history_action (action, created_at) | mvp1-ticket-history |
+| `0009_backfill_ticket_history.sql` | 回填已有工单的 'created' 历史记录 | mvp1-ticket-history |
 
 **每次新增迁移文件后需要做的事：**
 1. 在 `meta/_journal.json` 的 `entries` 数组末尾追加一条 `{idx, version, when, tag, breakpoints}` 记录
@@ -308,8 +336,11 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 - [ ] 前端页面加载正常：访问 `/login` 显示密码输入框 + 登录按钮
 - [ ] 输入正确密码 → 登录成功 → 跳转到对应角色工作台
 - [ ] admin 登录 → 可访问 `/workbench/admin` → 查看/新增/编辑/删除用户
+- [ ] admin/dispatcher 可见 "数据面板" 按钮 → 点击进入 `/dashboard`
+- [ ] Dashboard 页面 5 行内容正常展示（KPI/仪表盘/效率/负载/Timeline）
+- [ ] Dashboard "数据面板" ↔ "工作台" 双向切换正常
 - [ ] 退出按钮 → 返回 `/login`
-- [ ] 演示数据已播种（如需要）
+- [ ] 演示数据已播种（如需要，执行 §9.4 SQL）
 
 ---
 
@@ -391,13 +422,20 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 | `apps/server/src/middleware/auth.ts` | Auth 中间件（session 注入 + requireAuth，排除 passwordHash） |
 | `apps/server/src/routes/auth.ts` | Auth API（login/logout/me/users，密码登录） |
 | `apps/server/src/routes/admin.ts` | Admin API（用户 CRUD，需 user:manage 权限） |
+| `apps/server/src/routes/dashboard.ts` | Dashboard API（全局统计，admin/dispatcher） |
 | `apps/server/drizzle/0000_*.sql` | 迁移 SQL：tickets 表 |
 | `apps/server/drizzle/0001_*.sql` | 迁移 SQL：users 表 |
 | `apps/server/drizzle/0002_*.sql` | 迁移 SQL：users username 唯一索引 |
 | `apps/server/drizzle/0003_*.sql` | 迁移 SQL：tickets priority 列 |
 | `apps/server/drizzle/0004_*.sql` | 迁移 SQL：tickets due_date 列 |
 | `apps/server/drizzle/0005_*.sql` | 迁移 SQL：users password_hash 列 |
+| `apps/server/drizzle/0006_*.sql` | 迁移 SQL：ticket_history 表 |
+| `apps/server/drizzle/0007_*.sql` | 迁移 SQL：ticket_history ticket 索引 |
+| `apps/server/drizzle/0008_*.sql` | 迁移 SQL：ticket_history action 索引 |
+| `apps/server/drizzle/0009_*.sql` | 迁移 SQL：回填 ticket_history |
 | `apps/server/drizzle/meta/_journal.json` | Drizzle migrate() 追踪用 |
+| `packages/shared/src/dashboard-types.ts` | Dashboard 共享类型定义 |
+| `apps/web/src/pages/DashboardPage.tsx` | Dashboard 统计面板页面 |
 | `apps/web/src/pages/AdminWorkbench.tsx` | 管理员工作台（用户管理） |
 
 ### 相关 Spec
@@ -409,6 +447,7 @@ curl -b cookies.txt -X POST https://<你的域名>/api/tickets \
 | `backend-env/spec.md` (BE-003) | Drizzle ORM + 双 DB 后端、IF NOT EXISTS |
 | `backend-env/spec.md` (BE-006) | DB 工厂模式 |
 | `dev-tooling/spec.md` (DT-007) | 通用部署配置（静态资产） |
+| `dashboard/spec.md` (DSH-001, DSH-002, DSH-003) | Dashboard 统计 API + 页面 + 角色控制 |
 
 ---
 
@@ -475,7 +514,53 @@ CREATE TABLE IF NOT EXISTS `users` (
 CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);
 ```
 
-> **Tips**: 因为全部使用 `IF NOT EXISTS`，你可以把三条 SQL 全部粘贴执行，已存在的会自动跳过。
+```sql
+-- 0003: tickets 表新增 priority 列
+ALTER TABLE tickets ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium';
+```
+
+```sql
+-- 0004: tickets 表新增 due_date 列
+ALTER TABLE tickets ADD COLUMN due_date TEXT;
+```
+
+```sql
+-- 0005: users 表新增 password_hash 列
+ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
+```
+
+```sql
+-- 0006: ticket_history 表
+CREATE TABLE IF NOT EXISTS `ticket_history` (
+  `id` text PRIMARY KEY NOT NULL,
+  `ticket_id` text NOT NULL,
+  `action` text NOT NULL,
+  `actor` text NOT NULL,
+  `from_status` text,
+  `to_status` text NOT NULL,
+  `details` text,
+  `created_at` text NOT NULL
+);
+```
+
+```sql
+-- 0007: ticket_history 按 ticket_id + 时间查询索引
+CREATE INDEX IF NOT EXISTS `idx_ticket_history_ticket` ON `ticket_history` (`ticket_id`, `created_at`);
+```
+
+```sql
+-- 0008: ticket_history 按 action + 时间查询索引（Dashboard 聚合）
+CREATE INDEX IF NOT EXISTS `idx_ticket_history_action` ON `ticket_history` (`action`, `created_at`);
+```
+
+```sql
+-- 0009: 回填已有工单的 'created' 历史记录
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+SELECT lower(hex(randomblob(16))), id, 'created', created_by, NULL, 'submitted', NULL, created_at
+FROM tickets;
+```
+
+> **注意**：0003-0005 是 ALTER TABLE，如果列已存在会报错。如果之前已执行过，跳过即可。0006-0009 使用 `IF NOT EXISTS` / `INSERT OR IGNORE`，可重复执行。
 > 新迁移文件加入后，只需追加执行新的一条即可。
 
 ### 9.3 播种：插入预置用户
@@ -487,25 +572,191 @@ INSERT OR IGNORE INTO `users` (`id`, `username`, `display_name`, `role`, `passwo
   ('u-00000000-0000-0000-0000-000000000001', 'submitter', '提交者', 'submitter', '5cb16417fc52425121b2df3d6d3792874dff7e40a2d4dc9c8c5f13b66cf94a1c:76da450a1eda2144273058d383ff3a8d57f9bfc523d770614383355685f89a9e', '2026-01-01T00:00:00Z'),
   ('u-00000000-0000-0000-0000-000000000002', 'dispatcher', '调度者', 'dispatcher', 'acc18b5634b47758078ff9c96cc4bbb9fb3eb33abfcf6a34d1c2f5f60b2da4ef:3123ca69a4b61f31184920ff44adde7276f44c0e1e010969c6651839b357e1ea', '2026-01-01T00:00:00Z'),
   ('u-00000000-0000-0000-0000-000000000003', 'completer', '完成者', 'completer', 'b67c9d5960c3dcf428764debf4c64d8bea6fcb3641287f7e84f6e591294bccb3:51db018ebce0894ceedb06d05633ccd43dcddf547c961183080ad8482f08eb87f', '2026-01-01T00:00:00Z'),
-  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '8d5b7927cd47cd7c28759a21ad45b6b08a7484a276a9dbcbc6487b068bb634ed:da0db2dec8169f1880e575c680df1e74bf6250631838b8d4895d58b751bcad90', '2026-01-01T00:00:00Z');
+  ('u-00000000-0000-0000-0000-000000000004', 'admin', '管理员', 'admin', '8d5b7927cd47cd7c28759a21ad45b6b08a7484a276a9dbcbc6487b068bb634ed:da0db2dec8169f1880e575c680df1e74bf6250631838b8d4895d58b751bcad90', '2026-01-01T00:00:00Z'),
+  ('u-00000000-0000-0000-0000-000000000005', 'completer2', '完成者2', 'completer', 'b67c9d5960c3dcf428764debf4c64d8bea6fcb3641287f7e84f6e591294bccb3:51db018ebce0894ceedb06d05633ccd43dcddf547c961183080ad8482f08eb87f', '2026-01-01T00:00:00Z');
 ```
 
-> 密码：submitter/dispatcher/completer → `changeme`，admin → `admin`。`INSERT OR IGNORE` 保证可重复执行（username 已存在则跳过）。
+> 密码：submitter/dispatcher/completer/completer2 → `changeme`，admin → `admin`。`INSERT OR IGNORE` 保证可重复执行（username 已存在则跳过）。
 
-**播种 tickets（可选）：**
+### 9.4 播种 Dashboard 演示数据
 
-登录获取 cookie 后通过 API 创建（`createdBy` 由后端从 session 自动获取）：
+执行完 9.2（迁移）和 9.3（用户）后，Dashboard 页面虽然有数据但比较寡淡。下面这套 SQL 会插入 12 个工单和完整的 ticket_history 生命周期记录，让 Dashboard 五项指标全部非零、Timeline 饱满。
 
-```bash
-curl -c cookies.txt -X POST https://<域名>/api/auth/login \
-  -H 'Content-Type: application/json' -d '{"username": "submitter", "password": "changeme"}'
+路径：D1 Console，**先执行 9.2 迁移和 9.3 用户播种**，然后执行以下 SQL。
 
-curl -b cookies.txt -X POST https://<域名>/api/tickets \
-  -H 'Content-Type: application/json' \
-  -d '{"title": "Fix login page styling", "description": "Overflow on narrow screens"}'
+```sql
+-- ========================================
+-- TicketFlow Dashboard 演示数据
+-- 12 个工单，覆盖所有状态/优先级/角色
+-- 含完整 ticket_history 生命周期
+-- ========================================
+
+-- T1: submitted, high (本周)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-01', '移动端登录页布局溢出', '屏幕宽度小于 375px 时登录表单溢出，需响应式适配。', 'submitted', 'high', '2026-05-15', 'submitter', NULL,
+        datetime('now', '-3 hours'), datetime('now', '-3 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-01a', 't-seed-01', 'created', 'submitter', NULL, 'submitted', NULL, datetime('now', '-3 hours'));
+
+-- T2: submitted, low (本周)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-02', '新增暗色模式支持', '用户希望支持系统偏好自适应的暗色主题。', 'submitted', 'low', NULL, 'submitter', NULL,
+        datetime('now', '-2 hours'), datetime('now', '-2 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-02a', 't-seed-02', 'created', 'submitter', NULL, 'submitted', NULL, datetime('now', '-2 hours'));
+
+-- T3: submitted, medium (本周)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-03', '工单列表增加后端分页', '当前一次性加载全部数据，超过 200 条时页面卡顿。', 'submitted', 'medium', '2026-05-30', 'submitter', NULL,
+        datetime('now', '-1 hours'), datetime('now', '-1 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-03a', 't-seed-03', 'created', 'submitter', NULL, 'submitted', NULL, datetime('now', '-1 hours'));
+
+-- T4: assigned, medium → completer
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-04', 'Dashboard 数据库查询优化', 'Dashboard 在工单 >1000 时加载缓慢，需对 tickets 表加索引。', 'assigned', 'medium', '2026-05-20', 'dispatcher', 'completer',
+        datetime('now', '-5 days'), datetime('now', '-5 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-04a', 't-seed-04', 'created', 'dispatcher', NULL, 'submitted', NULL, datetime('now', '-5 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-04b', 't-seed-04', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer"}', datetime('now', '-5 days'));
+
+-- T5: assigned, high → completer2 (含一次改派)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-05', '实现邮件通知功能', '工单指派或完成时发送邮件通知相关人员，使用 SendGrid API。', 'assigned', 'high', '2026-05-10', 'submitter', 'completer',
+        datetime('now', '-4 days'), datetime('now', '-1 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-05a', 't-seed-05', 'created', 'submitter', NULL, 'submitted', NULL, datetime('now', '-4 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-05b', 't-seed-05', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer2"}', datetime('now', '-4 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-05c', 't-seed-05', 'reassigned', 'dispatcher', 'assigned', 'assigned', '{"assignee":"completer","prevAssignee":"completer2"}', datetime('now', '-1 days'));
+
+-- T6: assigned, high → completer (本周)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-06', '修复 Safari 下日期选择器异常', 'Safari 17 下 DatePicker 弹出层位置偏移。', 'assigned', 'high', NULL, 'submitter', 'completer',
+        datetime('now', '-3 days'), datetime('now', '-20 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-06a', 't-seed-06', 'created', 'submitter', NULL, 'submitted', NULL, datetime('now', '-3 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-06b', 't-seed-06', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer"}', datetime('now', '-20 hours'));
+
+-- T7: in_progress, high → completer (本周)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-07', '重构权限校验中间件', '权限逻辑散落在各路由中，需抽到统一的 permission middleware。', 'in_progress', 'high', '2026-05-08', 'admin', 'completer',
+        datetime('now', '-6 days'), datetime('now', '-10 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-07a', 't-seed-07', 'created', 'admin', NULL, 'submitted', NULL, datetime('now', '-6 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-07b', 't-seed-07', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer"}', datetime('now', '-5 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-07c', 't-seed-07', 'started', 'completer', 'assigned', 'in_progress', NULL, datetime('now', '-10 hours'));
+
+-- T8: in_progress, medium → completer2 (本周)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-08', '前端 E2E 测试覆盖登录流程', '补充登录页和 401 自动跳转的 Playwright 测试。', 'in_progress', 'medium', NULL, 'dispatcher', 'completer2',
+        datetime('now', '-4 days'), datetime('now', '-5 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-08a', 't-seed-08', 'created', 'dispatcher', NULL, 'submitted', NULL, datetime('now', '-4 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-08b', 't-seed-08', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer2"}', datetime('now', '-3 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-08c', 't-seed-08', 'started', 'completer2', 'assigned', 'in_progress', NULL, datetime('now', '-5 hours'));
+
+-- T9: completed, medium → completer (本周完成)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-09', '编写 API 文档', '为所有 REST 接口编写请求/响应示例文档。', 'completed', 'medium', NULL, 'dispatcher', 'completer',
+        datetime('now', '-7 days'), datetime('now', '-1 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-09a', 't-seed-09', 'created', 'dispatcher', NULL, 'submitted', NULL, datetime('now', '-7 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-09b', 't-seed-09', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer"}', datetime('now', '-6 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-09c', 't-seed-09', 'started', 'completer', 'assigned', 'in_progress', NULL, datetime('now', '-3 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-09d', 't-seed-09', 'completed', 'completer', 'in_progress', 'completed', NULL, datetime('now', '-1 hours'));
+
+-- T10: completed, high → completer (本周完成)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-10', 'Session 24h TTL + 401 拦截', '会话过期时间改为 24 小时，401 时前端自动跳转登录页。', 'completed', 'high', '2026-04-28', 'admin', 'completer',
+        datetime('now', '-8 days'), datetime('now', '-2 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-10a', 't-seed-10', 'created', 'admin', NULL, 'submitted', NULL, datetime('now', '-8 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-10b', 't-seed-10', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer"}', datetime('now', '-7 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-10c', 't-seed-10', 'started', 'completer', 'assigned', 'in_progress', NULL, datetime('now', '-5 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-10d', 't-seed-10', 'completed', 'completer', 'in_progress', 'completed', NULL, datetime('now', '-2 hours'));
+
+-- T11: completed, high → completer2 (本周完成)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-11', '工单详情页优化', 'Drawer 内 Timeline 样式调整，增加 actor 中文显示名。', 'completed', 'high', NULL, 'submitter', 'completer2',
+        datetime('now', '-6 days'), datetime('now', '-3 hours'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-11a', 't-seed-11', 'created', 'submitter', NULL, 'submitted', NULL, datetime('now', '-6 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-11b', 't-seed-11', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer2"}', datetime('now', '-5 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-11c', 't-seed-11', 'started', 'completer2', 'assigned', 'in_progress', NULL, datetime('now', '-2 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-11d', 't-seed-11', 'completed', 'completer2', 'in_progress', 'completed', NULL, datetime('now', '-3 hours'));
+
+-- T12: completed, low → completer (上周完成)
+INSERT OR IGNORE INTO tickets (id, title, description, status, priority, due_date, created_by, assigned_to, created_at, updated_at)
+VALUES ('t-seed-12', 'README 更新部署文档', '补充 Cloudflare D1 迁移步骤和常见问题。', 'completed', 'low', NULL, 'admin', 'completer',
+        datetime('now', '-12 days'), datetime('now', '-7 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-12a', 't-seed-12', 'created', 'admin', NULL, 'submitted', NULL, datetime('now', '-12 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-12b', 't-seed-12', 'assigned', 'dispatcher', 'submitted', 'assigned', '{"assignee":"completer"}', datetime('now', '-11 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-12c', 't-seed-12', 'started', 'completer', 'assigned', 'in_progress', NULL, datetime('now', '-10 days'));
+
+INSERT OR IGNORE INTO ticket_history (id, ticket_id, action, actor, from_status, to_status, details, created_at)
+VALUES ('h-seed-12d', 't-seed-12', 'completed', 'completer', 'in_progress', 'completed', NULL, datetime('now', '-7 days'));
 ```
 
-### 9.4 踩坑记录
+> **执行后预期效果**：
+> - overview: total≈12, createdThisWeek≈6-7, completedThisWeek≈4, pending≈5
+> - priorityDistribution: high≈5, medium≈3, low≈2
+> - efficiency: avgResponseMinutes≈600-1200, avgProcessMinutes≈3000-5000
+> - workload: completer(5/2/3), completer2(2/1/1)
+> - recentActivity: Timeline 10 条动态饱满
+> - 全部使用 `INSERT OR IGNORE`，可重复执行不报错
+
+### 9.5 踩坑记录
 
 | 时间 | 问题 | 原因 | 解决 |
 |------|------|------|------|
@@ -516,7 +767,7 @@ curl -b cookies.txt -X POST https://<域名>/api/tickets \
 | 日常 | Cloudflare 构建用旧 commit | 短时间多次 push，中间构建失败 | Dashboard 点 Rebuild 用最新 commit |
 | 日常 | Wrangler CLI auth 失败 | 非交互环境无法 login | 用 Dashboard Console 替代 |
 
-### 9.5 未来改进方向
+### 9.6 未来改进方向
 
 当前云端迁移和播种都是手动操作，后续可考虑：
 
