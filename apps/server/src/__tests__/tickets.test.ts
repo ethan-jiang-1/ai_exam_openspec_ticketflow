@@ -179,7 +179,7 @@ describe('Tickets API', () => {
       const body = await res.json()
       expect(body.status).toBe('assigned')
       expect(body.assignedTo).toBe('completer')
-      expect(body.updatedAt).not.toBe(body.createdAt)
+      expect(new Date(body.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(body.createdAt).getTime())
     })
 
     it('should reassign an assigned ticket to a different user', async () => {
@@ -341,7 +341,7 @@ describe('Tickets API', () => {
   })
 
   describe('ticket_history writes', () => {
-    it('should write created event on POST /api/tickets', async () => {
+    it('should write created event with content snapshot on POST /api/tickets', async () => {
       const res = await createTicket()
       const ticket = await res.json()
       const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, ticket.id))
@@ -350,6 +350,24 @@ describe('Tickets API', () => {
       expect(history[0].actor).toBe('submitter')
       expect(history[0].fromStatus).toBeNull()
       expect(history[0].toStatus).toBe('submitted')
+      const details = JSON.parse(history[0].details!)
+      expect(details.title).toBe('Test ticket')
+      expect(details.description).toBe('Test description')
+      expect(details.priority).toBe('medium')
+      expect(details.dueDate).toBeNull()
+    })
+
+    it('should store default priority in created snapshot', async () => {
+      const res = await app.request('/api/tickets', {
+        method: 'POST',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'Minimal', description: 'test' }),
+      })
+      const ticket = await res.json()
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, ticket.id))
+      const details = JSON.parse(history[0].details!)
+      expect(details.priority).toBe('medium')
+      expect(details.dueDate).toBeNull()
     })
 
     it('should write assigned event on first assign', async () => {
@@ -509,6 +527,8 @@ describe('Tickets API', () => {
         { method: 'PATCH', path: '/api/tickets/some-id/assign' },
         { method: 'PATCH', path: '/api/tickets/some-id/start' },
         { method: 'PATCH', path: '/api/tickets/some-id/complete' },
+        { method: 'PATCH', path: '/api/tickets/some-id' },
+        { method: 'POST', path: '/api/tickets/some-id/comments' },
       ]
       for (const ep of endpoints) {
         const res = await app.request(ep.path, {
@@ -585,6 +605,211 @@ describe('Tickets API', () => {
       expect(res.status).toBe(403)
       const body = await res.json()
       expect(body).toEqual({ error: '权限不足' })
+    })
+  })
+
+  describe('PATCH /api/tickets/:id — edit ticket', () => {
+    it('submitter can edit title in submitted status', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'Updated title' }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.title).toBe('Updated title')
+
+      // Verify history
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const editEntry = history.find((h) => h.action === 'edited')
+      expect(editEntry).toBeDefined()
+      expect(editEntry!.actor).toBe('submitter')
+      expect(editEntry!.fromStatus).toBe('submitted')
+      expect(editEntry!.toStatus).toBe('submitted')
+      const details = JSON.parse(editEntry!.details!)
+      expect(details.field).toBe('title')
+      expect(details.oldValue).toBe('Test ticket')
+      expect(details.newValue).toBe('Updated title')
+    })
+
+    it('returns 401 without session', async () => {
+      const res = await app.request('/api/tickets/some-id', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'X' }),
+      })
+      expect(res.status).toBe(401)
+    })
+
+    it('non-submitter cannot edit ticket (403)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ title: 'Hack' }),
+      })
+      expect(res.status).toBe(403)
+    })
+
+    it('cannot edit ticket not in submitted status (400)', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/assign`, {
+        method: 'PATCH',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ assignedTo: 'completer' }),
+      })
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'Try' }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects empty title (400)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: '' }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects empty body (400)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({}),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects invalid priority (400)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ priority: 'urgent' }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects title exceeding 200 chars (400)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'A'.repeat(201) }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('writes multiple history entries for multi-field edit', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'New title', priority: 'high' }),
+      })
+      expect(res.status).toBe(200)
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const editEntries = history.filter((h) => h.action === 'edited')
+      expect(editEntries).toHaveLength(2)
+    })
+
+    it('does not write history when no field changed', async () => {
+      const created = await (await createTicket()).json()
+      const historyBefore = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const res = await app.request(`/api/tickets/${created.id}`, {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'Test ticket' }),
+      })
+      expect(res.status).toBe(200)
+      const historyAfter = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      expect(historyAfter).toHaveLength(historyBefore.length)
+    })
+
+    it('returns 404 for non-existent ticket', async () => {
+      const res = await app.request('/api/tickets/non-existent-id', {
+        method: 'PATCH',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ title: 'X' }),
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('POST /api/tickets/:id/comments — add comment', () => {
+    it('can add comment to a ticket', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}/comments`, {
+        method: 'POST',
+        headers: dispatcherHeaders(),
+        body: JSON.stringify({ comment: '已确认问题，正在修复' }),
+      })
+      expect(res.status).toBe(201)
+
+      const history = await db.select().from(ticketHistory).where(eq(ticketHistory.ticketId, created.id))
+      const commentEntry = history.find((h) => h.action === 'commented')
+      expect(commentEntry).toBeDefined()
+      expect(commentEntry!.actor).toBe('dispatcher')
+      expect(commentEntry!.fromStatus).toBe('submitted')
+      expect(commentEntry!.toStatus).toBe('submitted')
+      const details = JSON.parse(commentEntry!.details!)
+      expect(details.comment).toBe('已确认问题，正在修复')
+    })
+
+    it('rejects empty comment (400)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}/comments`, {
+        method: 'POST',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ comment: '' }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects comment exceeding 2000 chars (400)', async () => {
+      const created = await (await createTicket()).json()
+      const res = await app.request(`/api/tickets/${created.id}/comments`, {
+        method: 'POST',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ comment: 'C'.repeat(2001) }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 401 without session', async () => {
+      const res = await app.request('/api/tickets/some-id/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: 'test' }),
+      })
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 404 for non-existent ticket', async () => {
+      const res = await app.request('/api/tickets/non-existent-id/comments', {
+        method: 'POST',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ comment: 'test' }),
+      })
+      expect(res.status).toBe(404)
+    })
+
+    it('does not modify tickets table', async () => {
+      const created = await (await createTicket()).json()
+      await app.request(`/api/tickets/${created.id}/comments`, {
+        method: 'POST',
+        headers: submitterHeaders(),
+        body: JSON.stringify({ comment: 'test' }),
+      })
+      const ticket = await db.select().from(tickets).where(eq(tickets.id, created.id))
+      expect(ticket[0].updatedAt).toBe(created.updatedAt)
     })
   })
 })

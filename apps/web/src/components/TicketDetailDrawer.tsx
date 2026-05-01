@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Drawer, Descriptions, Tag, Empty } from 'antd'
-import { getTicketHistory } from '../api/client'
+import { Drawer, Descriptions, Tag, Empty, Input, Button } from 'antd'
+import { getTicketHistory, addComment } from '../api/client'
 import { PRIORITY_LABELS, PRIORITY_COLORS, STATUS_LABELS, STATUS_COLORS } from '@ticketflow/shared'
 import type { Ticket, Priority } from '@ticketflow/shared'
 import Timeline from './Timeline'
@@ -11,6 +11,9 @@ interface TicketDetailDrawerProps {
   open: boolean
   onClose: () => void
   showTimeline?: boolean
+  enableComments?: boolean
+  refreshKey?: number
+  onCommentAdded?: () => void
 }
 
 export default function TicketDetailDrawer({
@@ -18,9 +21,15 @@ export default function TicketDetailDrawer({
   open,
   onClose,
   showTimeline = true,
+  enableComments = false,
+  refreshKey = 0,
+  onCommentAdded,
 }: TicketDetailDrawerProps) {
   const [history, setHistory] = useState<TicketHistoryEvent[]>([])
   const [historyError, setHistoryError] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [commentError, setCommentError] = useState('')
 
   useEffect(() => {
     if (open && ticket && showTimeline) {
@@ -30,7 +39,22 @@ export default function TicketDetailDrawer({
         .then(setHistory)
         .catch(() => setHistoryError(true))
     }
-  }, [open, ticket?.id, showTimeline])
+  }, [open, ticket?.id, showTimeline, refreshKey])
+
+  const handleAddComment = async () => {
+    if (!ticket || !commentText.trim()) return
+    setCommentSubmitting(true)
+    setCommentError('')
+    try {
+      await addComment(ticket.id, { comment: commentText.trim() })
+      setCommentText('')
+      onCommentAdded?.()
+    } catch (e) {
+      setCommentError(e instanceof Error ? e.message : '添加备注失败')
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
 
   return (
     <Drawer
@@ -80,6 +104,31 @@ export default function TicketDetailDrawer({
               ) : (
                 <Timeline events={history} />
               )}
+            </div>
+          )}
+
+          {enableComments && (
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ marginBottom: 12 }}>添加备注</h4>
+              <Input.TextArea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="输入备注内容..."
+                maxLength={2000}
+                showCount
+                rows={3}
+              />
+              {commentError && (
+                <div style={{ color: 'red', marginTop: 8 }}>{commentError}</div>
+              )}
+              <Button
+                type="primary"
+                onClick={handleAddComment}
+                loading={commentSubmitting}
+                style={{ marginTop: 8 }}
+              >
+                添加备注
+              </Button>
             </div>
           )}
         </>

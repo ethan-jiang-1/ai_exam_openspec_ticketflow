@@ -70,6 +70,32 @@ export async function completeTicket(id: string): Promise<Ticket> {
   return handleResponse<Ticket>(res)
 }
 
+export async function updateTicket(
+  id: string,
+  body: { title?: string; description?: string; priority?: string; dueDate?: string },
+): Promise<Ticket> {
+  const res = await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  })
+  return handleResponse<Ticket>(res)
+}
+
+export async function addComment(
+  id: string,
+  body: { comment: string },
+): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/tickets/${id}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  })
+  return handleResponse<{ success: boolean }>(res)
+}
+
 export async function getUsers() {
   const res = await fetch('/api/auth/users', { credentials: 'include' })
   return handleResponse<User[]>(res)

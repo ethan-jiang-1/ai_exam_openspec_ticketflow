@@ -11,6 +11,7 @@ export default function DispatcherWorkbench() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [assignees, setAssignees] = useState<User[]>([])
   const [assignValues, setAssignValues] = useState<Record<string, string>>({})
+  const [refreshKey, setRefreshKey] = useState(0)
   const { message } = AntdApp.useApp()
   const { user } = useAuth()
 
@@ -177,6 +178,9 @@ export default function DispatcherWorkbench() {
         ticket={selectedTicket}
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
+        enableComments
+        refreshKey={refreshKey}
+        onCommentAdded={() => setRefreshKey((k) => k + 1)}
       />
     </div>
   )

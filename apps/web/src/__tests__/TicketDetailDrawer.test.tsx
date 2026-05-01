@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ConfigProvider, App as AntdApp } from 'antd'
 import TicketDetailDrawer from '../components/TicketDetailDrawer'
 import type { Ticket, TicketHistoryEvent } from '@ticketflow/shared'
@@ -174,5 +174,113 @@ describe('TicketDetailDrawer', () => {
     // The dash should appear for null assignedTo
     const dashes = screen.getAllByText('—')
     expect(dashes.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders comment area when enableComments is true', async () => {
+    render(
+      <ConfigProvider>
+        <AntdApp>
+          <TicketDetailDrawer ticket={mockTicket} open={true} onClose={vi.fn()} enableComments />
+        </AntdApp>
+      </ConfigProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('测试工单标题')).toBeInTheDocument()
+    })
+
+    expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加备注' })).toBeInTheDocument()
+  })
+
+  it('does not render comment area when enableComments is false', async () => {
+    renderDrawer(true)
+
+    await waitFor(() => {
+      expect(screen.getByText('测试工单标题')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByPlaceholderText('输入备注内容...')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '添加备注' })).not.toBeInTheDocument()
+  })
+
+  it('submits comment successfully and clears input', async () => {
+    let commentBody: string | null = null
+    vi.restoreAllMocks()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/comments')) {
+        commentBody = init?.body as string
+        return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ success: true }) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+    })
+
+    const onCommentAdded = vi.fn()
+    render(
+      <ConfigProvider>
+        <AntdApp>
+          <TicketDetailDrawer ticket={mockTicket} open={true} onClose={vi.fn()} enableComments onCommentAdded={onCommentAdded} />
+        </AntdApp>
+      </ConfigProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('测试工单标题')).toBeInTheDocument()
+    })
+
+    const textarea = screen.getByPlaceholderText('输入备注内容...')
+    fireEvent.change(textarea, { target: { value: '测试备注内容' } })
+    fireEvent.click(screen.getByRole('button', { name: '添加备注' }))
+
+    await waitFor(() => {
+      expect(commentBody).not.toBeNull()
+    })
+
+    const body = JSON.parse(commentBody!)
+    expect(body.comment).toBe('测试备注内容')
+    expect(onCommentAdded).toHaveBeenCalled()
+
+    fetchMock.mockRestore()
+  })
+
+  it('shows error and retains text when comment API fails', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/comments')) {
+        return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: 'comment must not be empty' }) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+    })
+
+    render(
+      <ConfigProvider>
+        <AntdApp>
+          <TicketDetailDrawer ticket={mockTicket} open={true} onClose={vi.fn()} enableComments />
+        </AntdApp>
+      </ConfigProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('测试工单标题')).toBeInTheDocument()
+    })
+
+    const textarea = screen.getByPlaceholderText('输入备注内容...') as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: '我的备注' } })
+    fireEvent.click(screen.getByRole('button', { name: '添加备注' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('comment must not be empty')).toBeInTheDocument()
+    })
+
+    // Text should be retained
+    expect(textarea.value).toBe('我的备注')
   })
 })

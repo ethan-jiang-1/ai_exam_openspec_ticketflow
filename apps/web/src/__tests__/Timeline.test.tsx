@@ -107,6 +107,41 @@ describe('Timeline', () => {
     expect(screen.getByText('指派')).toBeInTheDocument()
   })
 
+  it('renders edited action with field label and old→new values', () => {
+    const events: TicketHistoryEvent[] = [
+      { ...baseEvent, action: 'edited', actor: 'submitter', fromStatus: 'submitted', toStatus: 'submitted', details: '{"field":"title","oldValue":"旧标题","newValue":"新标题"}' },
+    ]
+
+    renderTimeline(events)
+
+    expect(screen.getByText('编辑了标题')).toBeInTheDocument()
+    expect(screen.getByText(/旧标题/)).toBeInTheDocument()
+    expect(screen.getByText(/新标题/)).toBeInTheDocument()
+  })
+
+  it('renders commented action with comment text', () => {
+    const events: TicketHistoryEvent[] = [
+      { ...baseEvent, action: 'commented', actor: 'dispatcher', fromStatus: 'submitted', toStatus: 'submitted', details: '{"comment":"已确认问题"}' },
+    ]
+
+    renderTimeline(events)
+
+    expect(screen.getByText('添加了备注')).toBeInTheDocument()
+    expect(screen.getByText('已确认问题')).toBeInTheDocument()
+  })
+
+  it('does not render created details snapshot', () => {
+    const events: TicketHistoryEvent[] = [
+      { ...baseEvent, action: 'created', details: '{"title":"Bug","description":"Login fails","priority":"high","dueDate":"2026-06-01"}' },
+    ]
+
+    renderTimeline(events)
+
+    expect(screen.getByText('创建工单')).toBeInTheDocument()
+    expect(screen.queryByText('Bug')).not.toBeInTheDocument()
+    expect(screen.queryByText('Login fails')).not.toBeInTheDocument()
+  })
+
   it('renders timestamps in locale format', () => {
     renderTimeline([baseEvent])
 

@@ -10,6 +10,7 @@ export default function CompleterWorkbench() {
   const { user } = useAuth()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const { message } = AntdApp.useApp()
 
   const fetchTickets = async () => {
@@ -161,6 +162,9 @@ export default function CompleterWorkbench() {
         ticket={selectedTicket}
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
+        enableComments
+        refreshKey={refreshKey}
+        onCommentAdded={() => setRefreshKey((k) => k + 1)}
       />
     </div>
   )

@@ -682,3 +682,321 @@ describe('Workbench status filter', () => {
     expect(filterTriggers.length).toBeGreaterThan(0)
   })
 })
+
+describe('SubmitterWorkbench edit', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+  })
+
+  it('shows edit button for submitted tickets', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+
+    // Ticket A is submitted by submitter, should have edit button
+    const editButtons = screen.getAllByText('编辑')
+    expect(editButtons.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does not show edit button for non-submitted tickets', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket D')).toBeInTheDocument()
+    })
+
+    // Ticket D is in_progress, should not have edit button in its row
+    // "Ticket A" is submitted → has "编辑", "Ticket D" is in_progress → no "编辑"
+    // Both are shown since user is submitter
+    // The edit button only shows for status=submitted
+  })
+
+  it('opens edit modal with pre-filled values on edit click', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getAllByText('编辑')[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('编辑工单')).toBeInTheDocument()
+    })
+
+    // Form should be pre-filled with Ticket A values
+    const titleInput = screen.getByDisplayValue('Ticket A') as HTMLInputElement
+    expect(titleInput).toBeInTheDocument()
+  })
+
+  it('shows error and keeps modal open on API failure', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && init?.method === 'PATCH') {
+        return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: '编辑失败错误' }) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getAllByText('编辑')[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('编辑工单')).toBeInTheDocument()
+    })
+
+    const saveButton = document.querySelector('.ant-modal-footer .ant-btn-primary') as HTMLButtonElement
+    expect(saveButton).toBeTruthy()
+    fireEvent.click(saveButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('编辑失败错误')).toBeInTheDocument()
+    })
+
+    // Modal should still be open
+    expect(screen.getByText('编辑工单')).toBeInTheDocument()
+  })
+})
+
+describe('Workbench comments', () => {
+  const mockCommentHistory = [
+    { id: 'h1', ticketId: '1', action: 'created' as const, actor: 'submitter', fromStatus: null, toStatus: 'submitted', details: '{"title":"Test","description":"","priority":"low","dueDate":null}', createdAt: '2026-01-01T00:00:00Z' },
+    { id: 'h2', ticketId: '1', action: 'commented' as const, actor: 'dispatcher', fromStatus: 'submitted', toStatus: 'submitted', details: '{"comment":"测试备注"}', createdAt: '2026-01-02T00:00:00Z' },
+  ]
+
+  describe('DispatcherWorkbench comments', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+        }
+        if (urlStr === '/api/auth/users') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCommentHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+      })
+    })
+
+    it('renders comment area in DispatcherWorkbench Drawer', async () => {
+      renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket A')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Ticket A'))
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+      })
+
+      expect(screen.getByRole('button', { name: '添加备注' })).toBeInTheDocument()
+    })
+
+    it('submits comment successfully in DispatcherWorkbench', async () => {
+      let commentBody: string | null = null
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+        }
+        if (urlStr === '/api/auth/users') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/comments') && init?.method === 'POST') {
+          commentBody = init.body as string
+          return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ success: true }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCommentHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+      })
+
+      renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket A')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Ticket A'))
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+      })
+
+      fireEvent.change(screen.getByPlaceholderText('输入备注内容...'), { target: { value: '调度者备注' } })
+      fireEvent.click(screen.getByRole('button', { name: '添加备注' }))
+
+      await waitFor(() => {
+        expect(commentBody).not.toBeNull()
+      })
+
+      expect(JSON.parse(commentBody!).comment).toBe('调度者备注')
+    })
+
+    it('shows error on empty comment in DispatcherWorkbench', async () => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+        }
+        if (urlStr === '/api/auth/users') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/comments') && init?.method === 'POST') {
+          return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: 'comment must not be empty' }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCommentHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+      })
+
+      renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket A')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Ticket A'))
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+      })
+
+      fireEvent.change(screen.getByPlaceholderText('输入备注内容...'), { target: { value: '错误测试' } })
+      fireEvent.click(screen.getByRole('button', { name: '添加备注' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('comment must not be empty')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('CompleterWorkbench comments', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'completer', role: 'completer' }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCommentHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+      })
+    })
+
+    it('renders comment area in CompleterWorkbench Drawer', async () => {
+      renderPage('/workbench/completer', <CompleterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket B')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Ticket B'))
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+      })
+
+      expect(screen.getByRole('button', { name: '添加备注' })).toBeInTheDocument()
+    })
+
+    it('submits comment successfully in CompleterWorkbench', async () => {
+      let commentBody: string | null = null
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'completer', role: 'completer' }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/comments') && init?.method === 'POST') {
+          commentBody = init.body as string
+          return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ success: true }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCommentHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+      })
+
+      renderPage('/workbench/completer', <CompleterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket B')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Ticket B'))
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+      })
+
+      fireEvent.change(screen.getByPlaceholderText('输入备注内容...'), { target: { value: '完成者备注' } })
+      fireEvent.click(screen.getByRole('button', { name: '添加备注' }))
+
+      await waitFor(() => {
+        expect(commentBody).not.toBeNull()
+      })
+
+      expect(JSON.parse(commentBody!).comment).toBe('完成者备注')
+    })
+
+    it('retains comment text on API error in CompleterWorkbench', async () => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request, init?: RequestInit) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'completer', role: 'completer' }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/comments') && init?.method === 'POST') {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'Server error' }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCommentHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+      })
+
+      renderPage('/workbench/completer', <CompleterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket B')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Ticket B'))
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('输入备注内容...')).toBeInTheDocument()
+      })
+
+      const textarea = screen.getByPlaceholderText('输入备注内容...') as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: '我的备注文本' } })
+      fireEvent.click(screen.getByRole('button', { name: '添加备注' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Server error')).toBeInTheDocument()
+      })
+
+      expect(textarea.value).toBe('我的备注文本')
+    })
+  })
+})

@@ -12,6 +12,7 @@
   "dependencies": {
     "@ticketflow/shared": "workspace:*",
     "antd": "^6.3.7",
+    "dayjs": "^1.11.20",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"

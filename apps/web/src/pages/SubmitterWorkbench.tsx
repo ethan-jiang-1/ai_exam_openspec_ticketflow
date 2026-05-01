@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react'
-import { Form, Input, Button, Select, DatePicker, Table, Tag, Row, Col, Card, Empty, App as AntdApp } from 'antd'
-import { getTickets, createTicket } from '../api/client'
+import { Form, Input, Button, Select, DatePicker, Table, Tag, Row, Col, Card, Empty, Modal, App as AntdApp } from 'antd'
+import { getTickets, createTicket, updateTicket } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PRIORITY_LABELS, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '@ticketflow/shared'
 import type { Ticket, Priority, TicketStatus } from '@ticketflow/shared'
 import TicketDetailDrawer from '../components/TicketDetailDrawer'
+import dayjs from 'dayjs'
 
 export default function SubmitterWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [form] = Form.useForm()
+  const [editForm] = Form.useForm()
   const { message } = AntdApp.useApp()
   const { user } = useAuth()
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState('')
 
   const fetchTickets = async () => {
     try {
@@ -42,6 +47,43 @@ export default function SubmitterWorkbench() {
       message.error(e instanceof Error ? e.message : '创建工单失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const openEditModal = (ticket: Ticket) => {
+    setEditingTicket(ticket)
+    setEditError('')
+    editForm.setFieldsValue({
+      title: ticket.title,
+      description: ticket.description,
+      priority: ticket.priority,
+      dueDate: ticket.dueDate ? dayjs(ticket.dueDate) : undefined,
+    })
+  }
+
+  const handleEdit = async () => {
+    if (!editingTicket) return
+    try {
+      const values = await editForm.validateFields()
+      setEditLoading(true)
+      setEditError('')
+      await updateTicket(editingTicket.id, {
+        title: values.title?.trim(),
+        description: (values.description ?? '').trim(),
+        priority: values.priority,
+        dueDate: values.dueDate ? values.dueDate.format('YYYY-MM-DD') : undefined,
+      })
+      setEditingTicket(null)
+      editForm.resetFields()
+      await fetchTickets()
+    } catch (e) {
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) {
+        // validation error — antd will show field errors, don't close modal
+        return
+      }
+      setEditError(e instanceof Error ? e.message : '编辑失败')
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -80,6 +122,22 @@ export default function SubmitterWorkbench() {
       width: 180,
       responsive: ['lg'] as ('lg')[],
       render: (v: string) => new Date(v).toLocaleString(),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      fixed: 'right' as const,
+      width: 80,
+      render: (_: unknown, record: Ticket) => {
+        if (record.status === 'submitted') {
+          return (
+            <Button type="link" onClick={() => openEditModal(record)}>
+              编辑
+            </Button>
+          )
+        }
+        return null
+      },
     },
   ]
 
@@ -158,6 +216,38 @@ export default function SubmitterWorkbench() {
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
       />
+
+      <Modal
+        title="编辑工单"
+        open={!!editingTicket}
+        onCancel={() => { setEditingTicket(null); setEditError('') }}
+        onOk={handleEdit}
+        confirmLoading={editLoading}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="title" label="工单标题" rules={[{ required: true, message: '请输入工单标题' }, { max: 200, message: '标题不能超过 200 个字符' }]}>
+            <Input placeholder="工单标题" maxLength={200} showCount />
+          </Form.Item>
+          <Form.Item name="description" label="工单描述" rules={[{ max: 2000, message: '描述不能超过 2000 个字符' }]}>
+            <Input.TextArea placeholder="工单描述" rows={3} maxLength={2000} showCount />
+          </Form.Item>
+          <Form.Item name="priority" label="优先级">
+            <Select
+              options={[
+                { value: 'low', label: `${PRIORITY_LABELS.low} (低)` },
+                { value: 'medium', label: `${PRIORITY_LABELS.medium} (中)` },
+                { value: 'high', label: `${PRIORITY_LABELS.high} (高)` },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="dueDate" label="截止日期">
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          {editError && <div style={{ color: 'red', marginBottom: 16 }}>{editError}</div>}
+        </Form>
+      </Modal>
     </div>
   )
 }
