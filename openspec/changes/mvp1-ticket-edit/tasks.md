@@ -1,6 +1,6 @@
 ## 1. Shared Types
 
-- [ ] 1.1 `TicketHistoryAction` 类型新增 `'edited'` 和 `'commented'` 字面量 [TKT-018]
+- [ ] 1.1 `TicketHistoryAction` 类型新增 `'edited'` 和 `'commented'` 字面量 [TKT-025]
   > `ACTION_LABELS` 和 `ACTION_COLORS` 常量保留在 `Timeline.tsx` 本地，不移到 shared（属于 UI 展示逻辑）
 
 ## 2. Server API — 原始内容快照 + 编辑 + 备注
@@ -22,10 +22,10 @@
 
 ## 5. Frontend TicketDetailDrawer 改造
 
-- [ ] 5.1 TicketDetailDrawer 新增 `enableComments` prop（默认 false）和 `refreshKey` prop（默认 0），useEffect 依赖数组中包含 `refreshKey`，父组件通过递增 `refreshKey` 触发 Timeline 重新拉取 [TKT-018][WF-004][WF-005]
-- [ ] 5.2 `enableComments=true` 时在 Drawer 底部（Timeline 之后）渲染备注区域：antd `Input.TextArea`（`maxLength={2000}`、`showCount`、`rows={3}`）+ antd `Button` "添加备注"。`addComment` 直接从 `../api/client` 导入（遵循现有 `getTicketHistory` 导入模式）。提交成功后清空输入并调用 `onCommentAdded` 回调，父组件在回调中 `setRefreshKey(k => k + 1)` 触发 Timeline 刷新；API 失败时保留已输入文本并显示错误 [WF-004][WF-005]
+- [ ] 5.1 TicketDetailDrawer 新增 `enableComments` prop（默认 false）、`refreshKey` prop（默认 0）和 `onCommentAdded` 回调 prop，useEffect 依赖数组中包含 `refreshKey`，父组件通过递增 `refreshKey` 触发 Timeline 重新拉取 [TKT-017][TKT-018][WF-004][WF-005]
+- [ ] 5.2 `enableComments=true` 时在 Drawer 底部（Timeline 之后）渲染备注区域：antd `Input.TextArea`（`maxLength={2000}`、`showCount`、`rows={3}`）+ antd `Button` "添加备注"。`addComment` 直接从 `../api/client` 导入（遵循现有 `getTicketHistory` 导入模式）。提交成功后清空输入并调用 `onCommentAdded` 回调，父组件在回调中 `setRefreshKey(k => k + 1)` 触发 Timeline 刷新；API 失败时保留已输入文本并显示错误 [TKT-017][WF-004][WF-005]
   > Drawer 新增 `onCommentAdded?: () => void` 回调 prop，由父组件实现 refreshKey 递增逻辑
-- [ ] 5.3 TicketDetailDrawer 测试新增：备注区域渲染条件（enableComments=true/false）、提交备注成功、空内容校验、API 错误保留文本 [WF-004][WF-005]
+- [ ] 5.3 TicketDetailDrawer 测试新增：备注区域渲染条件（enableComments=true/false）、提交备注成功、空内容校验、API 错误保留文本 [TKT-017][WF-004][WF-005]
 
 ## 6. Frontend Workbench UI
 

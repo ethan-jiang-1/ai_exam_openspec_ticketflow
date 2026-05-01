@@ -33,7 +33,7 @@
 
 成功更新 SHALL：
 1. 更新 `tickets` 表中提供的字段
-2. 对每个变更字段写入一条 `ticket_history` 记录（action=`edited`，details 包含 `field`/`oldValue`/`newValue`）
+2. 对每个变更字段写入一条 `ticket_history` 记录（action=`edited`，fromStatus=<当前状态>，toStatus=<当前状态>，details 包含 `field`/`oldValue`/`newValue`）
 3. 更新 `tickets.updatedAt`
 
 校验规则：
@@ -46,7 +46,7 @@
 #### Scenario: submitter 在 submitted 状态编辑工单
 
 - **WHEN** submitter 发送 `PATCH /api/tickets/:id`，body 为 `{ "title": "Updated title" }`，工单 status 为 `submitted` 且 `createdBy` 为当前用户
-- **THEN** 响应状态码 SHALL 为 `200`，`title` SHALL 为 `"Updated title"`，`ticket_history` 中新增一条 action=`edited` 记录，details 为 `{"field":"title","oldValue":"<原值>","newValue":"Updated title"}`
+- **THEN** 响应状态码 SHALL 为 `200`，`title` SHALL 为 `"Updated title"`，`ticket_history` 中新增一条 action=`edited` 记录，fromStatus 和 toStatus 均为当前状态，details 为 `{"field":"title","oldValue":"<原值>","newValue":"Updated title"}`
 
 #### Scenario: 未登录用户编辑被拒绝
 
@@ -83,6 +83,16 @@
 - **WHEN** submitter 发送 `PATCH /api/tickets/:id`，body 为 `{ "title": "<201 字符的字符串>" }`
 - **THEN** 响应状态码 SHALL 为 `400`，响应体 SHALL 为 `{ error: string }` 格式
 
+#### Scenario: description 超过 2000 字符返回 400
+
+- **WHEN** submitter 发送 `PATCH /api/tickets/:id`，body 为 `{ "description": "<2001 字符的字符串>" }`
+- **THEN** 响应状态码 SHALL 为 `400`，响应体 SHALL 为 `{ error: string }` 格式
+
+#### Scenario: dueDate 格式非法返回 400
+
+- **WHEN** submitter 发送 `PATCH /api/tickets/:id`，body 为 `{ "dueDate": "not-a-date" }`
+- **THEN** 响应状态码 SHALL 为 `400`，响应体 SHALL 为 `{ error: string }` 格式
+
 #### Scenario: 同时编辑多个字段写入多条历史
 
 - **WHEN** submitter 发送 `PATCH /api/tickets/:id`，body 为 `{ "title": "New", "priority": "high" }`
@@ -103,7 +113,7 @@
 `POST /api/tickets/:id/comments` SHALL 接受 JSON body `{ comment: string }`，允许任何登录用户在任何工单状态下添加备注。
 
 成功 SHALL：
-1. 写入一条 `ticket_history` 记录（action=`commented`，details 为 `{"comment":"<备注内容>"}`，actor 为当前用户 username）
+1. 写入一条 `ticket_history` 记录（action=`commented`，fromStatus=<当前状态>，toStatus=<当前状态>，details 为 `{"comment":"<备注内容>"}`，actor 为当前用户 username）
 2. 不修改 `tickets` 表
 
 校验规则：
@@ -112,7 +122,7 @@
 #### Scenario: 成功添加备注
 
 - **WHEN** 登录用户发送 `POST /api/tickets/:id/comments`，body 为 `{ "comment": "已确认问题，正在修复" }`
-- **THEN** 响应状态码 SHALL 为 `201`，`ticket_history` 中新增一条 action=`commented` 记录，details 为 `{"comment":"已确认问题，正在修复"}`，actor 为当前用户 username
+- **THEN** 响应状态码 SHALL 为 `201`，`ticket_history` 中新增一条 action=`commented` 记录，fromStatus 和 toStatus 均为当前状态，details 为 `{"comment":"已确认问题，正在修复"}`，actor 为当前用户 username
 
 #### Scenario: comment 为空时拒绝
 
@@ -135,6 +145,59 @@
 - **THEN** 响应状态码 SHALL 为 `404`
 
 ## MODIFIED Requirements
+
+### Requirement: TKT-017 共享 TicketDetailDrawer 组件
+
+`apps/web/src/components/TicketDetailDrawer.tsx` SHALL 导出 `TicketDetailDrawer` 组件，接受以下 props：
+
+```typescript
+interface TicketDetailDrawerProps {
+  ticket: Ticket | null
+  open: boolean
+  onClose: () => void
+  showTimeline?: boolean      // 默认 true
+  enableComments?: boolean    // 默认 false
+  refreshKey?: number         // 默认 0
+  onCommentAdded?: () => void // enableComments=true 时由父组件传入
+}
+```
+
+组件内部 SHALL：
+1. 使用 antd `Drawer`（`width={480}`，`title={ticket.title}`）
+2. 使用 antd `Descriptions`（`column={1}`、`bordered`、`size="small"`）展示工单详情字段：状态（antd `Tag` + 中文标签）、创建者、指派给、优先级（antd `Tag`）、截止日期、创建时间、描述
+3. 当 `showTimeline` 为 `true` 时，调用 `getTicketHistory(ticket.id)` 获取历史数据，通过 `Timeline` 组件渲染处理时间线。useEffect 依赖数组包含 `refreshKey`，父组件通过递增 `refreshKey` 触发 Timeline 重新拉取
+4. 当 `enableComments` 为 `true` 时，在 Timeline 之后渲染备注区域：antd `Input.TextArea`（`maxLength={2000}`、`showCount`、`rows={3}`）+ antd `Button` "添加备注"。`addComment` 直接从 `../api/client` 导入。提交成功后清空输入并调用 `onCommentAdded` 回调；API 失败时保留已输入文本并显示错误
+5. 当 `getTicketHistory` 失败时，显示 antd `Empty` 组件，描述为 "无法加载处理历史"
+
+#### Scenario: Drawer 展示工单详情
+
+- **WHEN** 传入有效 `ticket` 对象，`open=true`
+- **THEN** antd Drawer SHALL 显示工单标题为 title，Descriptions 展示状态（Tag）、创建者、指派给、优先级（Tag）、截止日期、创建时间、描述
+
+#### Scenario: 展示处理时间线
+
+- **WHEN** `showTimeline=true` 且 `getTicketHistory` 返回 2 条记录
+- **THEN** Drawer 内 SHALL 渲染 antd Timeline，包含 2 个条目
+
+#### Scenario: 历史加载失败时的降级显示
+
+- **WHEN** `getTicketHistory` API 调用失败
+- **THEN** SHALL 显示 antd Empty "无法加载处理历史"，Drawer 其余部分正常显示
+
+#### Scenario: 备注区域条件渲染
+
+- **WHEN** `enableComments=true`
+- **THEN** Drawer 底部 SHALL 显示 Input.TextArea 备注输入框和 "添加备注" 按钮
+
+#### Scenario: 备注提交成功刷新 Timeline
+
+- **WHEN** 用户输入备注并点击 "添加备注"，API 返回成功
+- **THEN** SHALL 清空输入框，调用 `onCommentAdded` 回调通知父组件递增 refreshKey 以触发 Timeline 刷新
+
+#### Scenario: 备注 API 失败保留已输入文本
+
+- **WHEN** 用户输入备注后提交，但 API 返回错误
+- **THEN** 备注输入框中已输入的文本不被清空，并显示 API 错误提示
 
 ### Requirement: TKT-018 Timeline 组件
 
@@ -186,3 +249,30 @@
 
 - **WHEN** 传入 1 条 action 为 `created` 的 TicketHistoryEvent，`details` 为 `{"title":"Bug","description":"...","priority":"high","dueDate":"2026-06-01"}`
 - **THEN** Timeline item SHALL 仅显示 "创建工单"，不渲染 details 中的快照内容
+
+### Requirement: TKT-022 ticket_history 表定义
+
+`apps/server/src/db/schema.ts` 的 `ticketHistory` 表 `action` 字段 SHALL 扩展允许值，从 `created`/`assigned`/`reassigned`/`started`/`completed` 五种扩展为七种：新增 `edited` 和 `commented`。
+
+#### Scenario: action 字段接受新值
+
+- **WHEN** 插入一条 `action='edited'` 的 ticket_history 记录
+- **THEN** 数据库 SHALL 接受该记录，无约束违反错误
+
+### Requirement: TKT-023 状态变更写入 History
+
+`POST /api/tickets` 创建工单时写入的 `ticket_history` 记录，其 `details` 字段 SHALL 从 `null` 改为包含原始内容快照的 JSON 字符串（格式见 TKT-019），其余端点行为不变。
+
+#### Scenario: 创建工单 details 不为 null
+
+- **WHEN** 发送 `POST /api/tickets` 创建工单成功
+- **THEN** `ticketHistory` 表对应记录的 `details` 字段 SHALL 为原始内容快照 JSON，而非 `null`
+
+### Requirement: TKT-025 TicketHistoryEvent 共享类型
+
+`packages/shared/src/ticket-types.ts` 的 `TicketHistoryAction` 类型 SHALL 从 `'created' | 'assigned' | 'reassigned' | 'started' | 'completed'` 扩展为 `'created' | 'assigned' | 'reassigned' | 'started' | 'completed' | 'edited' | 'commented'`。
+
+#### Scenario: 新 action 值类型可用
+
+- **WHEN** 在 `apps/web` 或 `apps/server` 中使用 `action: 'edited'` 或 `action: 'commented'` 赋值给 `TicketHistoryAction` 类型变量
+- **THEN** TypeScript SHALL 编译通过，无类型错误
