@@ -18,6 +18,7 @@ export default function SubmitterWorkbench() {
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
 
   const fetchTickets = async () => {
     try {
@@ -206,7 +207,11 @@ export default function SubmitterWorkbench() {
           dataSource={tickets}
           columns={columns}
           rowKey="id"
-          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}
+          pagination={{ ...pagination, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}
+          onChange={(pag) => {
+            if (pag.current) setPagination((prev) => ({ ...prev, current: pag.current! }))
+            if (pag.pageSize) setPagination({ current: 1, pageSize: pag.pageSize! })
+          }}
           scroll={{ x: 'max-content' }}
         />
       )}

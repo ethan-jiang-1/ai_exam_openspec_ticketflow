@@ -582,53 +582,223 @@ describe('Workbench pagination', () => {
     updatedAt: '2026-01-01T00:00:00Z',
   }))
 
-  beforeEach(() => {
-    vi.restoreAllMocks()
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
-      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
-      if (urlStr === '/api/auth/me') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
-      }
-      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(manyTickets) } as Response)
+  describe('SubmitterWorkbench', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(manyTickets) } as Response)
+      })
+    })
+
+    it('shows first page with 10 rows by default', async () => {
+      renderPage('/workbench/submitter', <SubmitterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+      })
+
+      // Default pageSize=10: rows 1-10 visible, row 11 not
+      expect(screen.getByText('Ticket 10')).toBeInTheDocument()
+      expect(screen.queryByText('Ticket 11')).not.toBeInTheDocument()
+    })
+
+    it('renders pagination with total count and size changer', async () => {
+      renderPage('/workbench/submitter', <SubmitterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+      })
+
+      // Size changer present
+      const sizeChanger = document.querySelector('.ant-pagination-options-size-changer')
+      expect(sizeChanger).toBeTruthy()
+
+      // Page items present (at least page 2)
+      expect(document.querySelector('.ant-pagination-item-2')).toBeTruthy()
+    })
+
+    it('persists pageSize after switching and triggering re-render', async () => {
+      renderPage('/workbench/submitter', <SubmitterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+      })
+
+      // Open sizeChanger dropdown with mouseDown
+      const sizeChanger = document.querySelector('.ant-pagination-options-size-changer') as HTMLElement
+      expect(sizeChanger).toBeTruthy()
+      fireEvent.mouseDown(sizeChanger)
+      // Wait for dropdown to appear
+      await new Promise((r) => setTimeout(r, 100))
+      expect(document.querySelectorAll('.ant-select-item-option').length).toBeGreaterThan(0)
+
+      // Click "20 / page" option
+      const option20 = Array.from(document.querySelectorAll('.ant-select-item-option'))
+        .find((el) => el.textContent?.includes('20 / page'))
+      expect(option20).toBeTruthy()
+      fireEvent.click(option20!)
+      await new Promise((r) => setTimeout(r, 200))
+
+      // After changing to 20/page, row 11 should be visible on first page
+      expect(screen.getByText('Ticket 11')).toBeInTheDocument()
+
+      // Trigger a re-render by clicking a ticket title to open drawer
+      const ticket1Links = screen.getAllByText('Ticket 1')
+      fireEvent.click(ticket1Links[0])
+      await new Promise((r) => setTimeout(r, 200))
+
+      // pageSize should still be 20 — row 11 still visible (not reset to 10)
+      expect(screen.getByText('Ticket 11')).toBeInTheDocument()
     })
   })
 
-  it('shows pagination controls in SubmitterWorkbench', async () => {
-    renderPage('/workbench/submitter', <SubmitterWorkbench />)
-    await waitFor(() => {
-      expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+  describe('DispatcherWorkbench', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+        }
+        if (urlStr === '/api/auth/users') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(manyTickets) } as Response)
+      })
     })
 
-    // With 25 tickets, pagination should show page size selector and total
-    expect(screen.getByText(/25/)).toBeInTheDocument()
+    it('shows first page with at most 10 rows', async () => {
+      renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+      })
+
+      const rowCount = document.querySelectorAll('.ant-table-row').length
+      expect(rowCount).toBeLessThanOrEqual(10)
+    })
+
+    it('renders pagination with size changer', async () => {
+      renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+      })
+
+      expect(document.querySelector('.ant-pagination-options-size-changer')).toBeTruthy()
+    })
+
+    it('persists pageSize after switching and triggering re-render', async () => {
+      renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+      })
+
+      const sizeChanger = document.querySelector('.ant-pagination-options-size-changer') as HTMLElement
+      expect(sizeChanger).toBeTruthy()
+      fireEvent.mouseDown(sizeChanger)
+      await new Promise((r) => setTimeout(r, 100))
+      expect(document.querySelectorAll('.ant-select-item-option').length).toBeGreaterThan(0)
+
+      const option20 = Array.from(document.querySelectorAll('.ant-select-item-option'))
+        .find((el) => el.textContent?.includes('20 / page'))
+      expect(option20).toBeTruthy()
+      fireEvent.click(option20!)
+      await new Promise((r) => setTimeout(r, 200))
+
+      expect(screen.getByText('Ticket 11')).toBeInTheDocument()
+
+      // Trigger re-render by clicking ticket title
+      const ticket1Links = screen.getAllByText('Ticket 1')
+      fireEvent.click(ticket1Links[0])
+      await new Promise((r) => setTimeout(r, 200))
+
+      // pageSize should persist — row 11 still visible
+      expect(screen.getByText('Ticket 11')).toBeInTheDocument()
+    })
   })
 
-  it('shows pagination controls in DispatcherWorkbench', async () => {
-    vi.restoreAllMocks()
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
-      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
-      if (urlStr === '/api/auth/me') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
-      }
-      if (urlStr === '/api/auth/users') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
-      }
-      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(manyTickets) } as Response)
-    })
-    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
-    await waitFor(() => {
-      expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+  describe('CompleterWorkbench', () => {
+    // All 25 tickets assigned to 'completer', status assigned or in_progress
+    const completerTickets = Array.from({ length: 25 }, (_, i) => ({
+      id: `${i + 1}`,
+      title: `CTicket ${i + 1}`,
+      description: '',
+      status: (i % 3 === 0 ? 'assigned' : 'in_progress') as Ticket['status'],
+      priority: 'medium' as Ticket['priority'],
+      dueDate: null,
+      createdBy: 'submitter',
+      assignedTo: 'completer',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    }))
+
+    beforeEach(() => {
+      vi.restoreAllMocks()
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+        if (urlStr === '/api/auth/me') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'completer', role: 'completer' }) } as Response)
+        }
+        if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(completerTickets) } as Response)
+      })
     })
 
-    // Pagination controls should exist
-    const pageSizeOptions = document.querySelector('.ant-pagination-options')
-    expect(pageSizeOptions).toBeTruthy()
+    it('shows first page with at most 10 rows', async () => {
+      renderPage('/workbench/completer', <CompleterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('CTicket 1')).toBeInTheDocument()
+      })
+
+      const rowCount = document.querySelectorAll('.ant-table-row').length
+      expect(rowCount).toBeLessThanOrEqual(10)
+    })
+
+    it('renders pagination with size changer', async () => {
+      renderPage('/workbench/completer', <CompleterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('CTicket 1')).toBeInTheDocument()
+      })
+
+      expect(document.querySelector('.ant-pagination-options-size-changer')).toBeTruthy()
+    })
+
+    it('persists pageSize after switching and triggering re-render', async () => {
+      renderPage('/workbench/completer', <CompleterWorkbench />)
+      await waitFor(() => {
+        expect(screen.getByText('CTicket 1')).toBeInTheDocument()
+      })
+
+      const sizeChanger = document.querySelector('.ant-pagination-options-size-changer') as HTMLElement
+      expect(sizeChanger).toBeTruthy()
+      fireEvent.mouseDown(sizeChanger)
+      await new Promise((r) => setTimeout(r, 100))
+      expect(document.querySelectorAll('.ant-select-item-option').length).toBeGreaterThan(0)
+
+      const option20 = Array.from(document.querySelectorAll('.ant-select-item-option'))
+        .find((el) => el.textContent?.includes('20 / page'))
+      expect(option20).toBeTruthy()
+      fireEvent.click(option20!)
+      await new Promise((r) => setTimeout(r, 200))
+
+      expect(screen.getByText('CTicket 11')).toBeInTheDocument()
+
+      // Trigger re-render by clicking ticket title
+      const ticket1Links = screen.getAllByText('CTicket 1')
+      fireEvent.click(ticket1Links[0])
+      await new Promise((r) => setTimeout(r, 200))
+
+      // pageSize should persist — row 11 still visible
+      expect(screen.getByText('CTicket 11')).toBeInTheDocument()
+    })
   })
 })
 

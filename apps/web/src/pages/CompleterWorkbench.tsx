@@ -11,6 +11,7 @@ export default function CompleterWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
   const { message } = AntdApp.useApp()
 
   const fetchTickets = async () => {
@@ -153,7 +154,11 @@ export default function CompleterWorkbench() {
           dataSource={displayTickets}
           columns={columns}
           rowKey="id"
-          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}
+          pagination={{ ...pagination, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100', '200'] }}
+          onChange={(pag) => {
+            if (pag.current) setPagination((prev) => ({ ...prev, current: pag.current! }))
+            if (pag.pageSize) setPagination({ current: 1, pageSize: pag.pageSize! })
+          }}
           scroll={{ x: 'max-content' }}
         />
       )}
