@@ -93,6 +93,11 @@
 - **WHEN** 调度者看到一条 assigned 工单，在 antd `Select` 中选择不同的 completer 用户，点击改派 Button
 - **THEN** SHALL 调用 `PATCH /api/tickets/:id/assign`，body 为 `{ assignedTo: "<username>" }`，成功后列表 SHALL 刷新
 
+#### Scenario: 重新指派给相同用户显示错误
+
+- **WHEN** 调度者看到一条 assigned 工单（assignedTo 为 `completer`），在 antd `Select` 中未改变选择（仍为 `completer`），点击 "改派" Button
+- **THEN** SHALL 显示错误提示 "工单已指派给该用户"，不刷新列表
+
 #### Scenario: 已指派工单仍可见
 
 - **WHEN** 调度者视图中有 1 条 submitted 工单和 1 条 assigned 工单
