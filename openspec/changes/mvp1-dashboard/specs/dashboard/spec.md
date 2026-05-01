@@ -80,9 +80,9 @@
 **行 2 — 完成率仪表盘 + 优先级分布：**
 使用 `Row`/`Col`，左侧 `Col sm={8}` 放 antd `Card`，内嵌 `Progress type="dashboard" percent={completionRate}`，标题 "完成率"。完成率 = `completedThisWeek / createdThisWeek * 100`，createdThisWeek 为 0 时显示 0。
 右侧 `Col sm={16}` 放 antd `Card`，标题 "待处理工单优先级分布"，内嵌 3 条 `Progress percent={...} showInfo={true}`：
-- 紧急（high）：`strokeColor="#ff4d4f"`，值来自 priorityDistribution.high
-- 中等（medium）：`strokeColor="#faad14"`，值来自 priorityDistribution.medium
-- 低（low）：`strokeColor="#1890ff"`，值来自 priorityDistribution.low
+- 紧急（high）：`strokeColor` 使用 `PRIORITY_COLORS.high`，值来自 priorityDistribution.high
+- 中等（medium）：`strokeColor` 使用 `PRIORITY_COLORS.medium`，值来自 priorityDistribution.medium
+- 低（low）：`strokeColor` 使用 `PRIORITY_COLORS.low`，值来自 priorityDistribution.low
 每条 Progress 的 `percent` = 该优先级的 pending 数量 / pending 总数 * 100。
 
 **行 3 — 效率指标（3 个）：**
@@ -91,18 +91,18 @@
 **行 4 — 负载表格：**
 antd `Table`（`pagination={false}`），列为：
 - 完成者（displayName）
-- 待处理 — 使用 `render` 返回 `<Progress percent={...} size="small" />` + 数字，`strokeColor="#faad14"`。percent = assignedCount / totalAssigned * 100（totalAssigned 为所有完成者 assignedCount 之和，为 0 时显示 0）
-- 处理中 — `<Progress percent={...} size="small" />` + 数字，`strokeColor="#1890ff"`
+- 待处理 — 使用 `render` 返回 `<Progress percent={...} size="small" />` + 数字，`strokeColor` 使用 `STATUS_COLORS.assigned`。percent = assignedCount / totalAssigned * 100（totalAssigned 为所有完成者 assignedCount 之和，为 0 时显示 0）
+- 处理中 — `<Progress percent={...} size="small" />` + 数字，`strokeColor="blue"`（`STATUS_COLORS.in_progress` 值为 `processing` 不适用于 Progress strokeColor）
 - 本周完成 — 纯数字（completedThisWeekCount）
 
 **行 5 — 最近动态：**
 antd `Timeline` + `Tag` 展示 recentActivity（最近 10 条），每条显示时间（HH:mm 格式）、actor、action 描述文本、工单标题（ticketTitle 可点击链接，点击后弹出 `TicketDetailDrawer`）、状态 Tag（使用 STATUS_COLORS）。
 Timeline dot `color` 按 action 类型区分：
 - `created` → `color="blue"`
-- `assigned` → `color="gold"`
+- `assigned` → `color` 使用 `STATUS_COLORS.assigned`
 - `reassigned` → `color="orange"`
 - `started` → `color="cyan"`
-- `completed` → `color="green"`
+- `completed` → `color` 使用 `STATUS_COLORS.completed`
 - `edited`/`commented` → `color="default"`
 
 #### Scenario: admin 查看 Dashboard 面板
@@ -127,7 +127,7 @@ Timeline dot `color` 按 action 类型区分：
 
 #### Scenario: 负载表格中 Progress 条颜色正确
 
-- **WHEN** 负载表格有数据，待处理列 Progress `strokeColor` SHALL 为 `#faad14`，处理中列 Progress `strokeColor` SHALL 为 `#1890ff`
+- **WHEN** 负载表格有数据，待处理列 Progress strokeColor SHALL 使用 STATUS_COLORS.assigned，处理中列 Progress strokeColor SHALL 为 "blue"
 
 #### Scenario: 无 recentActivity 时 Timeline 显示空提示
 
@@ -138,17 +138,17 @@ Timeline dot `color` 按 action 类型区分：
 
 `/dashboard` 路由 SHALL 仅允许 role 为 admin 或 dispatcher 的用户访问。submitter 和 completer 用户访问 `/dashboard` 时 SHALL 重定向到各自工作台（`/workbench/:role`）。未登录用户访问 `/dashboard` SHALL 重定向到 `/login`。
 
-Layout Header 中 "数据面板" 导航链接 SHALL 仅在 `user.role === 'admin' || user.role === 'dispatcher'` 时渲染。
+注：Layout Header 中 "数据面板" 导航按钮的可见性由 WF-002（共享 Layout）spec 定义，不在本 Requirement 中重复。
 
 #### Scenario: admin 访问 /dashboard
 
 - **WHEN** admin 用户已登录，访问 `/dashboard`
-- **THEN** SHALL 渲染 DashboardPage，Layout Header 显示 "数据面板" 链接
+- **THEN** SHALL 渲染 DashboardPage
 
 #### Scenario: dispatcher 访问 /dashboard
 
 - **WHEN** dispatcher 用户已登录，访问 `/dashboard`
-- **THEN** SHALL 渲染 DashboardPage，Layout Header 显示 "数据面板" 链接
+- **THEN** SHALL 渲染 DashboardPage
 
 #### Scenario: submitter 访问 /dashboard 被重定向
 
@@ -159,13 +159,3 @@ Layout Header 中 "数据面板" 导航链接 SHALL 仅在 `user.role === 'admin
 
 - **WHEN** completer 用户已登录，访问 `/dashboard`
 - **THEN** SHALL 重定向到 `/workbench/completer`
-
-#### Scenario: submitter 看不到数据面板链接
-
-- **WHEN** submitter 用户已登录，进入工作台
-- **THEN** Layout Header SHALL 不显示 "数据面板" 链接
-
-#### Scenario: completer 看不到数据面板链接
-
-- **WHEN** completer 用户已登录，进入工作台
-- **THEN** Layout Header SHALL 不显示 "数据面板" 链接

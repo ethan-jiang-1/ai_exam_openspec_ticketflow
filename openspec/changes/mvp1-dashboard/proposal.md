@@ -22,7 +22,7 @@ MVP1 缺少全局视角：管理员和调度者无法快速了解工单系统的
 
 ### Modified Capabilities
 
-- `workflow`: WF-002（共享 Layout）Header 增加 "数据面板" 导航链接（仅 admin/dispatcher 可见）；WF-008（路由挂载）新增 `/dashboard` 路由及角色守卫
+- `workflow`: WF-002（共享 Layout）Header 增加 "数据面板" 导航链接（仅 admin/dispatcher 可见）；WF-008（路由挂载）新增 `/dashboard` 路由及角色守卫，同时补写缺失的 `/workbench/admin` 路由（代码中已存在，原 spec 遗漏）
 
 ## Impact
 

@@ -190,22 +190,34 @@ DB 列名 ↔ JS 属性名映射（遵循项目命名约定）：
 │               低   ████████░░░░ 5                             │
 │  Progress 颜色使用 @ticketflow/shared 的 PRIORITY_COLORS 常量     │
 ├──────────────────────────────────────────────────────────────┤
-│  Row 3: 3 × Card + Statistic（效率指标）                       │
-│  平均响应: 45min    平均处理: 120min    本周改派: 5次          │
+│  Row 3: 3 × Card（size="small"）+ Statistic（效率指标）        │
+│  平均响应: 45min    平均处理: 120min    本周改派次数: 5        │
 │  Row/Col: xs={12} sm={8}                                     │
 ├──────────────────────────────────────────────────────────────┤
 │  Row 4: Table（负载表格，含 Progress 条）                      │
 │  完成者  │ 待处理(Progress)     │ 处理中(Progress)     │ 本周完成│
 │  张三    │ ████░░ 3(37%)       │ ██░░░ 1(25%)         │    5   │
 │  pagination={false}                                           │
-│  Progress 颜色使用 STATUS_COLORS: assignedCount=STATUS_COLORS.assigned, inProgressCount=STATUS_COLORS.in_progress│
+│  Progress 颜色: assignedCount=STATUS_COLORS.assigned, inProgressCount="blue"（STATUS_COLORS.in_progress='processing' 不可用于 Progress strokeColor）│
 ├──────────────────────────────────────────────────────────────┤
 │  Row 5: Timeline（最近动态，最近 10 条）                       │
 │  ● 10:30 完成者 完成了工单 "修复登录页样式"  [completed Tag]   │
 │  ● 10:15 调度者 将工单 "数据导出报错" 指派给 完成者  [assigned]│
 │  ● 10:00 提交者 创建了工单 "新增用户管理页面"  [submitted Tag]  │
-│  Timeline dot 颜色按 action 类型区分，使用 STATUS_COLORS 常量映射                           │
+│  Timeline dot 颜色按 action 类型映射：created=blue, assigned=STATUS_COLORS.assigned, reassigned=orange, started=cyan, completed=STATUS_COLORS.completed, edited/commented=default                           │
 └──────────────────────────────────────────────────────────────┘
+```
+
+## 本周计算方法
+
+"本周一 00:00:00" 使用服务器本地时区计算：`new Date()` → 减去 `(dayOfWeek + 6) % 7` 天 → 截断到 00:00:00.000。`dayOfWeek` 使用 `getDay()`（0=周日），周一为 1。
+
+```ts
+const now = new Date()
+const monday = new Date(now)
+monday.setDate(now.getDate() - (now.getDay() + 6) % 7)
+monday.setHours(0, 0, 0, 0)
+const weekStart = monday.toISOString()
 ```
 
 ## Test Strategy
@@ -224,3 +236,4 @@ DB 列名 ↔ JS 属性名映射（遵循项目命名约定）：
 1. **统计是否需要按时间范围筛选（本周/本月/自定义）？** — 当前设计固定为「本周」，如有需要可在后续 change 中扩展 `?range=week|month|all` 参数。
 2. **workload 是否需要显示所有完成者还是仅活跃完成者？** — 当前返回所有 role=completer 的用户，即使负载为 0。这样管理者可以看到完整人力列表。
 3. **Dashboard 是否需要自动刷新？** — 当前设计为静态页面加载，不做轮询。如果有实时监控需求，后续可加 `setInterval` 轮询或 WebSocket 推送。
+4. **Progress 条颜色与共享常量如何对齐？** — `PRIORITY_COLORS` 和 `STATUS_COLORS` 是为 antd Tag 设计的，值是命名颜色（'red', 'green' 等）和特殊值（'processing'）。Progress 组件的 `strokeColor` 接受命名颜色但 'processing' 无效。是否需要新增 dashboard 专用颜色常量到 shared 包，还是在页面内处理映射？

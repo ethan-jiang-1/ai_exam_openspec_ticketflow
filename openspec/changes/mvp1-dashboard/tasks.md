@@ -26,7 +26,7 @@
 
 **依赖**: 无（可并行开发）
 
-- [ ] 2.1 在 `packages/shared/src/` 新增 `DashboardData` 类型（含 DashboardOverview、DashboardEfficiency、DashboardWorkloadItem、RecentActivityItem 接口）[DSH-001][DSH-002]
+- [ ] 2.1 在 `packages/shared/src/dashboard-types.ts` 新增 `DashboardData` 类型（含 DashboardOverview、DashboardEfficiency、DashboardWorkloadItem、RecentActivityItem 接口），并在 `packages/shared/src/index.ts` 中 re-export [DSH-001][DSH-002]
 
 ## 3. Dashboard 前端页面
 
@@ -35,13 +35,14 @@
 - [ ] 3.1 在 `apps/web/src/api/client.ts` 添加 `getDashboard()` 函数，返回类型使用 `DashboardData` [DSH-002]
 - [ ] 3.2 编写 `apps/web/src/__tests__/dashboard.test.tsx` 组件测试 [DSH-002][DSH-003]
   - admin 查看 Dashboard 完整面板（4 KPI + 仪表盘 + 优先级 Progress + 效率指标 + 负载 Table + Timeline）
+  - 页面加载中显示 Spin 组件
   - 点击 Timeline 中 ticketTitle 弹出 TicketDetailDrawer
   - Dashboard API 调用失败（显示错误，不白屏）
   - 完成率为 0 时仪表盘显示 0
-  - 负载表格中 Progress 条颜色正确
+  - 负载表格中 Progress 条颜色正确（使用 PRIORITY_COLORS/STATUS_COLORS 常量）
   - 无 recentActivity 时 Timeline 显示 Empty
-  - admin 看到数据面板链接，submitter 看不到
-  - submitter/completer 访问 /dashboard 被重定向
+  - admin 和 dispatcher 看到数据面板链接，submitter 和 completer 看不到
+  - submitter/completer 访问 /dashboard 被重定向，admin/dispatcher 正常访问
   - 测试使用 mock fetch 模拟 API 响应，AuthContext 通过 mock AuthProvider 注入不同角色用户
 - [ ] 3.3 实现 `apps/web/src/pages/DashboardPage.tsx` 统计面板页面 [DSH-002]
   - 行 1: 4 个 Card+Statistic（数字跳动效果）— total/createdThisWeek/completedThisWeek/pending
