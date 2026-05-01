@@ -2,7 +2,7 @@
 
 ### Requirement: WF-002 共享 Layout
 
-所有 `/workbench/*` 路由和 `/dashboard` 路由 SHALL 使用 antd `Layout` 组件（`Layout` + `Layout.Header` + `Layout.Content`）构建页面骨架。Header 顶部 SHALL 从 `AuthContext` 获取当前用户信息，显示 "{displayName}" 文本、`user.role` 为 `admin` 或 `dispatcher` 时显示 antd `Button` "数据面板" 导航按钮（点击跳转到 `/dashboard`），以及 antd `Button` "退出"按钮。
+所有 `/workbench/*` 路由和 `/dashboard` 路由 SHALL 使用 antd `Layout` 组件（`Layout` + `Layout.Header` + `Layout.Content`）构建页面骨架。Header 顶部 SHALL 从 `AuthContext` 获取当前用户信息，显示 "{displayName}" 文本、`user.role` 为 `admin` 或 `dispatcher` 时显示双向导航按钮：在 `/dashboard` 路径时显示 antd `Button` "工作台"（点击跳转到 `/workbench/:role`），在其他路径时显示 antd `Button` "数据面板"（点击跳转到 `/dashboard`），以及 antd `Button` "退出"按钮。
 
 #### Scenario: 显示当前用户
 
@@ -14,15 +14,25 @@
 - **WHEN** 用户点击 antd `Button` "退出"
 - **THEN** SHALL 调用 `POST /api/auth/logout`，清除 session，页面 SHALL 跳转到 `/login`
 
-#### Scenario: admin 看到数据面板链接
+#### Scenario: admin 在工作台看到数据面板链接
 
-- **WHEN** admin 用户以登录状态进入工作台或 Dashboard
+- **WHEN** admin 用户以登录状态进入工作台（`/workbench/admin`）
 - **THEN** Layout Header SHALL 显示 antd `Button` "数据面板"，点击后跳转到 `/dashboard`
 
-#### Scenario: dispatcher 看到数据面板链接
+#### Scenario: admin 在 Dashboard 看到工作台链接
 
-- **WHEN** dispatcher 用户以登录状态进入工作台或 Dashboard
+- **WHEN** admin 用户以登录状态进入 Dashboard（`/dashboard`）
+- **THEN** Layout Header SHALL 显示 antd `Button` "工作台"，点击后跳转到 `/workbench/admin`
+
+#### Scenario: dispatcher 在工作台看到数据面板链接
+
+- **WHEN** dispatcher 用户以登录状态进入工作台（`/workbench/dispatcher`）
 - **THEN** Layout Header SHALL 显示 antd `Button` "数据面板"，点击后跳转到 `/dashboard`
+
+#### Scenario: dispatcher 在 Dashboard 看到工作台链接
+
+- **WHEN** dispatcher 用户以登录状态进入 Dashboard（`/dashboard`）
+- **THEN** Layout Header SHALL 显示 antd `Button` "工作台"，点击后跳转到 `/workbench/dispatcher`
 
 #### Scenario: submitter 看不到数据面板链接
 

@@ -306,7 +306,7 @@ describe('DashboardPage', () => {
   })
 
   describe('nav button visibility', () => {
-    it('admin sees data panel nav link in layout', async () => {
+    it('admin sees workbench link when on dashboard', async () => {
       vi.stubGlobal('fetch', createFetchMock(adminUser))
       renderInRouter(
         <Routes>
@@ -316,12 +316,11 @@ describe('DashboardPage', () => {
         </Routes>,
       )
       await waitFor(() => {
-        const links = screen.getAllByText('数据面板')
-        expect(links.length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByText('工作台')).toBeInTheDocument()
       }, { timeout: 5000 })
     })
 
-    it('dispatcher sees data panel nav link in layout', async () => {
+    it('dispatcher sees workbench link when on dashboard', async () => {
       vi.stubGlobal('fetch', createFetchMock(dispatcherUser))
       renderInRouter(
         <Routes>
@@ -331,9 +330,40 @@ describe('DashboardPage', () => {
         </Routes>,
       )
       await waitFor(() => {
-        const links = screen.getAllByText('数据面板')
-        expect(links.length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByText('工作台')).toBeInTheDocument()
       }, { timeout: 5000 })
+    })
+
+    it('admin sees data panel link when on workbench', async () => {
+      vi.stubGlobal('fetch', createFetchMock(adminUser))
+      renderInRouter(
+        <Routes>
+          <Route path="/workbench/admin" element={<Layout />}>
+            <Route index element={<div>Admin Content</div>} />
+          </Route>
+        </Routes>,
+        '/workbench/admin',
+      )
+      await waitFor(() => {
+        expect(screen.getByText('Admin Content')).toBeInTheDocument()
+      }, { timeout: 5000 })
+      expect(screen.getByText('数据面板')).toBeInTheDocument()
+    })
+
+    it('dispatcher sees data panel link when on workbench', async () => {
+      vi.stubGlobal('fetch', createFetchMock(dispatcherUser))
+      renderInRouter(
+        <Routes>
+          <Route path="/workbench/dispatcher" element={<Layout />}>
+            <Route index element={<div>Dispatcher Content</div>} />
+          </Route>
+        </Routes>,
+        '/workbench/dispatcher',
+      )
+      await waitFor(() => {
+        expect(screen.getByText('Dispatcher Content')).toBeInTheDocument()
+      }, { timeout: 5000 })
+      expect(screen.getByText('数据面板')).toBeInTheDocument()
     })
 
     it('submitter does not see data panel nav link', async () => {
@@ -350,6 +380,7 @@ describe('DashboardPage', () => {
         expect(screen.getByText('Submitter Content')).toBeInTheDocument()
       }, { timeout: 5000 })
       expect(screen.queryByText('数据面板')).not.toBeInTheDocument()
+      expect(screen.queryByText('工作台')).not.toBeInTheDocument()
     })
 
     it('completer does not see data panel nav link', async () => {
@@ -366,6 +397,7 @@ describe('DashboardPage', () => {
         expect(screen.getByText('Completer Content')).toBeInTheDocument()
       }, { timeout: 5000 })
       expect(screen.queryByText('数据面板')).not.toBeInTheDocument()
+      expect(screen.queryByText('工作台')).not.toBeInTheDocument()
     })
   })
 })

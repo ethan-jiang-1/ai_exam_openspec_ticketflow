@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Layout as AntLayout, Button, Tag, Typography } from 'antd'
 import { useAuth } from '../context/AuthContext'
 import { ROLE_LABELS, ROLE_COLORS } from '@ticketflow/shared'
@@ -14,6 +14,8 @@ const HEADER_BG: Record<string, string> = {
 export default function Layout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isDashboard = location.pathname === '/dashboard'
 
   const handleLogout = async () => {
     await logout()
@@ -44,9 +46,15 @@ export default function Layout() {
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {(role === 'admin' || role === 'dispatcher') && (
-            <Button type="link" size="small" onClick={() => navigate('/dashboard')}>
-              数据面板
-            </Button>
+            isDashboard ? (
+              <Button type="link" size="small" onClick={() => navigate(`/workbench/${role}`)}>
+                工作台
+              </Button>
+            ) : (
+              <Button type="link" size="small" onClick={() => navigate('/dashboard')}>
+                数据面板
+              </Button>
+            )
           )}
           <span style={{ fontWeight: 500 }}>{user?.displayName}</span>
           <Button size="small" onClick={handleLogout}>

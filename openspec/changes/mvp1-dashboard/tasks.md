@@ -65,9 +65,9 @@
     - 在渲染 Table 前，先通过 `reduce` 遍历 workload 数组计算 totalAssigned 和 totalInProgress（所有完成者 assignedCount/inProgressCount 之和），用于 Progress percent 分母。分母为 0 时 percent 显示 0
   - 行 5: Timeline（最近 10 条动态，dot 颜色按 action 区分，颜色使用 STATUS_COLORS 常量；ticketTitle 可点击弹出 TicketDetailDrawer）
   - loading 状态（Spin）+ 错误处理（message.error）
-- [x] 3.4 修改 `apps/web/src/components/Layout.tsx` Header 添加 "数据面板" 导航按钮 [DSH-003][WF-002]
+- [x] 3.4 修改 `apps/web/src/components/Layout.tsx` Header 添加双向导航按钮 [DSH-003][WF-002]
   - 仅 admin/dispatcher 可见（antd `Button` type="link"）
-  - 点击跳转 `/dashboard`
+  - 通过 `useLocation()` 判断当前路径：`/dashboard` 时显示 "工作台"（跳转 `/workbench/${role}`），否则显示 "数据面板"（跳转 `/dashboard`）
 - [x] 3.5 修改 `apps/web/src/App.tsx` 添加 `/dashboard` 路由 + 角色守卫 [DSH-003][WF-008]
   - 在现有 `<Route path="/workbench" element={<ProtectedLayout />}>` 同级添加 `<Route path="/dashboard" element={<ProtectedLayout />}>`
   - DashboardGuard：`if (user.role !== 'admin' && user.role !== 'dispatcher') return <Navigate to={/workbench/${user.role}} replace />`

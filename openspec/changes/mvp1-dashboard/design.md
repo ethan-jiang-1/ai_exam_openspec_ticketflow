@@ -19,7 +19,7 @@ TicketFlow 已有 `ticket_history` 表记录工单的每一次状态变更（cre
 **Goals:**
 - `GET /api/dashboard` 返回 overview（总量/本周新建/本周完成/待处理/优先级分布）、efficiency（平均响应/平均处理/改派次数）、workload（按完成者负载）、recentActivity（最近 10 条操作动态，含工单标题）
 - `/dashboard` 页面单页滚动布局，使用 antd `Statistic`（数字跳动）、`Progress`（仪表盘 + 条形进度条）、`Table`（负载表格含进度条）、`Timeline`（最近动态）展示完整仪表盘
-- Layout Header 为 admin/dispatcher 增加 "数据面板" 导航入口
+- Layout Header 为 admin/dispatcher 增加双向导航按钮：在工作台时显示 "数据面板"（跳转 `/dashboard`），在数据面板时显示 "工作台"（跳转 `/workbench/:role`）
 - `/dashboard` 路由仅 admin 和 dispatcher 可访问
 
 **Non-Goals:**
@@ -39,13 +39,13 @@ TicketFlow 已有 `ticket_history` 表记录工单的每一次状态变更（cre
 
 **替代方案：** 新建独立 `DashboardLayout` — 会导致 Header 重复，且用户需在不同布局间切换体验不一致。否决。
 
-### Decision 2: Header 导航用 antd `Button` 而非 Menu
+### Decision 2: Header 导航用 antd `Button`，双向切换
 
-**选择：** 在 Layout Header 中添加一个 `Button`（type="link"）作为 "数据面板" 入口，放在用户名左侧。
+**选择：** 在 Layout Header 中添加 `Button`（type="link"）导航入口，放在用户名左侧。通过 `useLocation()` 判断当前路径：在 `/dashboard` 时显示 "工作台"（跳转 `/workbench/:role`），在其他页面时显示 "数据面板"（跳转 `/dashboard`）。仅当 `user.role === 'admin' || user.role === 'dispatcher'` 时渲染。
 
-**理由：** 当前 Header 极简，无菜单栏。添加单个 Button 破坏性最小，且与现有 "退出" Button 风格一致。仅当 `user.role === 'admin' || user.role === 'dispatcher'` 时渲染。
+**理由：** admin/dispatcher 有两个面板（工作台 + 数据面板），需要便捷的双向切换手段。当前 Header 极简，无菜单栏。单个 Button 破坏性最小，且与现有 "退出" Button 风格一致。基于路径动态切换标签保持 UI 紧凑。
 
-**替代方案：** 使用 antd `Menu` 组件 — 对 1 个链接来说过重，且需要改变 Header 布局结构，不值得。
+**替代方案：** 使用 antd `Menu` 组件 — 对 2 个面板来说过重，且需要改变 Header 布局结构，不值得。
 
 ### Decision 3: Dashboard API 为独立路由文件
 

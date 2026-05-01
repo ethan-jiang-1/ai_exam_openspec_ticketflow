@@ -138,7 +138,7 @@ Timeline dot `color` 按 action 类型区分：
 
 `/dashboard` 路由 SHALL 仅允许 role 为 admin 或 dispatcher 的用户访问。submitter 和 completer 用户访问 `/dashboard` 时 SHALL 重定向到各自工作台（`/workbench/:role`）。未登录用户访问 `/dashboard` SHALL 重定向到 `/login`。
 
-注：Layout Header 中 "数据面板" 导航按钮的可见性由 WF-002（共享 Layout）spec 定义，不在本 Requirement 中重复。
+注：Layout Header 中双向导航按钮（"数据面板" ↔ "工作台"）的可见性和行为由 WF-002（共享 Layout）spec 定义，不在本 Requirement 中重复。
 
 #### Scenario: admin 访问 /dashboard
 
