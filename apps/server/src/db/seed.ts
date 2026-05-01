@@ -200,7 +200,6 @@ console.log(`Seeded ${ticketCount} tickets`)
 
 let historyCount = 0
 for (const h of seedHistory) {
-  const existing = await db.select().from(ticketHistory).where(eq(ticketHistory.id, randomId())).limit(0)
   // Check if this exact history record already exists (by ticketId + action + createdAt)
   const dup = await db.select().from(ticketHistory).where(eq(ticketHistory.createdAt, h.createdAt))
   if (dup.length === 0) {

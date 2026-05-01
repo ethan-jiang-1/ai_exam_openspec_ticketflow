@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Drawer, Descriptions, Row, Col, Card, Empty, App as AntdApp } from 'antd'
+import { Table, Tag, Button, Row, Col, Card, Empty, App as AntdApp } from 'antd'
 import { getTickets, startTicket, completeTicket } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PRIORITY_LABELS, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '@ticketflow/shared'
 import type { Ticket, Priority, TicketStatus } from '@ticketflow/shared'
+import TicketDetailDrawer from '../components/TicketDetailDrawer'
 
 export default function CompleterWorkbench() {
   const { user } = useAuth()
@@ -69,6 +70,13 @@ export default function CompleterWorkbench() {
       dataIndex: 'status',
       key: 'status',
       width: 100,
+      filters: [
+        { text: STATUS_LABELS.assigned, value: 'assigned' },
+        { text: STATUS_LABELS.in_progress, value: 'in_progress' },
+        { text: STATUS_LABELS.completed, value: 'completed' },
+      ],
+      onFilter: (value: React.Key | boolean, record: Ticket) => record.status === String(value),
+      filterSearch: false,
       render: (status: string) => <Tag color={STATUS_COLORS[status as TicketStatus]}>{STATUS_LABELS[status as TicketStatus] || status}</Tag>,
     },
     { title: '创建者', dataIndex: 'createdBy', key: 'createdBy', width: 100, responsive: ['lg'] as ('lg')[] },
@@ -144,51 +152,16 @@ export default function CompleterWorkbench() {
           dataSource={displayTickets}
           columns={columns}
           rowKey="id"
-          pagination={false}
+          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100', '200'] }}
           scroll={{ x: 'max-content' }}
         />
       )}
 
-      <Drawer
-        title={selectedTicket?.title}
+      <TicketDetailDrawer
+        ticket={selectedTicket}
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
-        width={480}
-      >
-        {selectedTicket && (
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="状态">
-              <Tag color={STATUS_COLORS[selectedTicket.status]}>{STATUS_LABELS[selectedTicket.status]}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="优先级">
-              <Tag color={PRIORITY_COLORS[selectedTicket.priority]}>{PRIORITY_LABELS[selectedTicket.priority as Priority] ?? selectedTicket.priority}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="截止日期">
-              {selectedTicket.dueDate
-                ? (() => {
-                    const d = new Date(selectedTicket.dueDate)
-                    const today = new Date()
-                    today.setHours(0, 0, 0, 0)
-                    const due = new Date(selectedTicket.dueDate + 'T00:00:00')
-                    const isOverdue = due < today
-                    const isToday = due.getTime() === today.getTime()
-                    return (
-                      <span style={(isOverdue || isToday) ? { color: 'red' } : {}}>
-                        {d.toLocaleDateString()}
-                        {isOverdue && <Tag color="red" style={{ marginLeft: 4 }}>已到期</Tag>}
-                        {isToday && <Tag color="red" style={{ marginLeft: 4 }}>今日到期</Tag>}
-                      </span>
-                    )
-                  })()
-                : '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label="创建者">{selectedTicket.createdBy}</Descriptions.Item>
-            <Descriptions.Item label="指派给">{selectedTicket.assignedTo ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label="创建时间">{new Date(selectedTicket.createdAt).toLocaleString()}</Descriptions.Item>
-            <Descriptions.Item label="描述">{selectedTicket.description || '—'}</Descriptions.Item>
-          </Descriptions>
-        )}
-      </Drawer>
+      />
     </div>
   )
 }

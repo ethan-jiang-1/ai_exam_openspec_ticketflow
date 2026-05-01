@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Select, Empty, Drawer, Descriptions, Row, Col, Card, App as AntdApp } from 'antd'
+import { Table, Tag, Button, Select, Empty, Row, Col, Card, App as AntdApp } from 'antd'
 import { getTickets, getUsers, assignTicket } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PRIORITY_LABELS, PRIORITY_ORDER, STATUS_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '@ticketflow/shared'
 import type { Ticket, Priority, TicketStatus, User } from '@ticketflow/shared'
+import TicketDetailDrawer from '../components/TicketDetailDrawer'
 
 export default function DispatcherWorkbench() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -70,6 +71,9 @@ export default function DispatcherWorkbench() {
       dataIndex: 'status',
       key: 'status',
       width: 100,
+      filters: Object.entries(STATUS_LABELS).map(([value, text]) => ({ text, value })),
+      onFilter: (value: React.Key | boolean, record: Ticket) => record.status === String(value),
+      filterSearch: false,
       render: (status: string) => <Tag color={STATUS_COLORS[status as TicketStatus]}>{STATUS_LABELS[status as TicketStatus] || status}</Tag>,
     },
     { title: '创建者', dataIndex: 'createdBy', key: 'createdBy', width: 100, responsive: ['lg'] as ('lg')[] },
@@ -164,50 +168,16 @@ export default function DispatcherWorkbench() {
           dataSource={displayTickets}
           columns={columns}
           rowKey="id"
-          pagination={false}
+          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100', '200'] }}
           scroll={{ x: 'max-content' }}
         />
       )}
 
-      <Drawer
-        title={selectedTicket?.title}
+      <TicketDetailDrawer
+        ticket={selectedTicket}
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
-        width={480}
-      >
-        {selectedTicket && (
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="状态">
-              <Tag color={STATUS_COLORS[selectedTicket.status]}>{STATUS_LABELS[selectedTicket.status]}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="优先级">
-              <Tag color={PRIORITY_COLORS[selectedTicket.priority]}>{PRIORITY_LABELS[selectedTicket.priority as Priority] ?? selectedTicket.priority}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="截止日期">
-              {selectedTicket.dueDate
-                ? (() => {
-                    const today = new Date()
-                    today.setHours(0, 0, 0, 0)
-                    const due = new Date(selectedTicket.dueDate + 'T00:00:00')
-                    const isOverdue = due < today
-                    const isToday = due.getTime() === today.getTime()
-                    return (
-                      <span style={(isOverdue || isToday) ? { color: 'red' } : {}}>
-                        {due.toLocaleDateString()}
-                        {isOverdue && <Tag color="red" style={{ marginLeft: 4 }}>已到期</Tag>}
-                        {isToday && <Tag color="red" style={{ marginLeft: 4 }}>今日到期</Tag>}
-                      </span>
-                    )
-                  })()
-                : '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label="创建者">{selectedTicket.createdBy}</Descriptions.Item>
-            <Descriptions.Item label="指派给">{selectedTicket.assignedTo ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label="创建时间">{new Date(selectedTicket.createdAt).toLocaleString()}</Descriptions.Item>
-            <Descriptions.Item label="描述">{selectedTicket.description || '—'}</Descriptions.Item>
-          </Descriptions>
-        )}
-      </Drawer>
+      />
     </div>
   )
 }

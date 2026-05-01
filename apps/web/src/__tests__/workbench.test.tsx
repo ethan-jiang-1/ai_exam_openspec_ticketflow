@@ -8,6 +8,7 @@ import SubmitterWorkbench from '../pages/SubmitterWorkbench'
 import DispatcherWorkbench from '../pages/DispatcherWorkbench'
 import CompleterWorkbench from '../pages/CompleterWorkbench'
 import AdminWorkbench from '../pages/AdminWorkbench'
+import type { Ticket } from '@ticketflow/shared'
 
 const mockUser = { id: 'u1', username: 'submitter', displayName: '提交者', role: 'submitter' as const, createdAt: '2026-01-01T00:00:00Z' }
 
@@ -24,6 +25,11 @@ const mockUsers = [
   { username: 'submitter', displayName: '提交者', role: 'submitter', id: 'u1', createdAt: '2026-01-01T00:00:00Z' },
   { username: 'dispatcher', displayName: '调度者', role: 'dispatcher', id: 'u2', createdAt: '2026-01-01T00:00:00Z' },
   { username: 'completer', displayName: '完成者', role: 'completer', id: 'u3', createdAt: '2026-01-01T00:00:00Z' },
+]
+
+const mockHistory = [
+  { id: 'h1', ticketId: '6', action: 'created' as const, actor: 'submitter', fromStatus: null, toStatus: 'submitted', details: null, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'h2', ticketId: '6', action: 'assigned' as const, actor: 'dispatcher', fromStatus: 'submitted', toStatus: 'assigned', details: '{"assignee":"completer"}', createdAt: '2026-01-02T00:00:00Z' },
 ]
 
 function renderPage(path: string, element: React.ReactElement) {
@@ -312,7 +318,19 @@ describe('Workbench ticket detail', () => {
     })
   })
 
-  it('SubmitterWorkbench shows ticket detail in Drawer on click', async () => {
+  it('SubmitterWorkbench shows ticket detail in Drawer with Timeline on click', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+
     renderPage('/workbench/submitter', <SubmitterWorkbench />)
     await waitFor(() => {
       expect(screen.getByText('Ticket F')).toBeInTheDocument()
@@ -322,6 +340,8 @@ describe('Workbench ticket detail', () => {
 
     await waitFor(() => {
       expect(screen.getByText('A detailed description for ticket F')).toBeInTheDocument()
+      expect(screen.getByText('创建工单')).toBeInTheDocument()
+      expect(screen.getByText('指派')).toBeInTheDocument()
     })
   })
 })
@@ -545,5 +565,120 @@ describe('Dispatcher reassign', () => {
     await waitFor(() => {
       expect(screen.getByText('工单已指派给该用户')).toBeInTheDocument()
     })
+  })
+})
+
+describe('Workbench pagination', () => {
+  const manyTickets = Array.from({ length: 25 }, (_, i) => ({
+    id: `${i + 1}`,
+    title: `Ticket ${i + 1}`,
+    description: '',
+    status: (i % 4 === 0 ? 'submitted' : i % 4 === 1 ? 'assigned' : i % 4 === 2 ? 'in_progress' : 'completed') as Ticket['status'],
+    priority: (i % 3 === 0 ? 'high' : i % 3 === 1 ? 'medium' : 'low') as Ticket['priority'],
+    dueDate: null,
+    createdBy: 'submitter',
+    assignedTo: i % 2 === 0 ? 'completer' : null,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  }))
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(manyTickets) } as Response)
+    })
+  })
+
+  it('shows pagination controls in SubmitterWorkbench', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+    })
+
+    // With 25 tickets, pagination should show page size selector and total
+    expect(screen.getByText(/25/)).toBeInTheDocument()
+  })
+
+  it('shows pagination controls in DispatcherWorkbench', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(manyTickets) } as Response)
+    })
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket 1')).toBeInTheDocument()
+    })
+
+    // Pagination controls should exist
+    const pageSizeOptions = document.querySelector('.ant-pagination-options')
+    expect(pageSizeOptions).toBeTruthy()
+  })
+})
+
+describe('Workbench status filter', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUser) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+  })
+
+  it('status column has filter dropdown in SubmitterWorkbench', async () => {
+    renderPage('/workbench/submitter', <SubmitterWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+
+    // The filter icon should be rendered on the status column header
+    const filterTriggers = document.querySelectorAll('.ant-table-filter-trigger')
+    expect(filterTriggers.length).toBeGreaterThan(0)
+  })
+
+  it('status column has filter dropdown in DispatcherWorkbench', async () => {
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+      if (urlStr === '/api/auth/me') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockUser, username: 'dispatcher', role: 'dispatcher' }) } as Response)
+      }
+      if (urlStr === '/api/auth/users') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockUsers) } as Response)
+      }
+      if (urlStr.includes('/api/tickets/') && urlStr.includes('/history')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHistory) } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTickets) } as Response)
+    })
+    renderPage('/workbench/dispatcher', <DispatcherWorkbench />)
+    await waitFor(() => {
+      expect(screen.getByText('Ticket A')).toBeInTheDocument()
+    })
+
+    const filterTriggers = document.querySelectorAll('.ant-table-filter-trigger')
+    expect(filterTriggers.length).toBeGreaterThan(0)
   })
 })
