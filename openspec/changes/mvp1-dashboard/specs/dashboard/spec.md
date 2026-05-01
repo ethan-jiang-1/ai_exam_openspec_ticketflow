@@ -7,16 +7,16 @@
 数据来源：
 - overview.total: `tickets` 表 COUNT(*)
 - overview.createdThisWeek: `tickets` 表 COUNT(*) WHERE created_at >= 本周一 00:00:00
-- overview.completedThisWeek: `ticket_history` 表 COUNT(*) WHERE action='completed' AND created_at >= 本周一 00:00:00
+- overview.completedThisWeek: `ticket_history` 表 COUNT(DISTINCT ticket_id) WHERE action='completed' AND created_at >= 本周一 00:00:00
 - overview.pending: `tickets` 表 COUNT(*) WHERE status != 'completed'
 - overview.priorityDistribution: `tickets` 表按 priority 分组 COUNT（仅 status != 'completed' 的工单），返回 `{ high: number, medium: number, low: number }`
 - efficiency.avgResponseMinutes: 对有指派记录的工单，计算「首次指派时间 - 创建时间」的平均分钟数。首次指派时间 = ticket_history 中 action='assigned' 且 ticket_id 对应的最小 created_at
 - efficiency.avgProcessMinutes: 对已完成工单，计算「完成时间 - 首次指派时间」的平均分钟数。完成时间 = ticket_history 中 action='completed' 且 ticket_id 对应的最小 created_at
 - efficiency.reassignCount: `ticket_history` 表 COUNT(*) WHERE action='reassigned' AND created_at >= 本周一 00:00:00
-- workload: 所有 role='completer' 的用户，每人统计 assignedCount（tickets WHERE assigned_to=username AND status='assigned'）、inProgressCount（tickets WHERE assigned_to=username AND status='in_progress'）、completedThisWeekCount（ticket_history 表 JOIN tickets 表，WHERE ticket_history.action='completed' AND tickets.assigned_to=username AND ticket_history.created_at >= 本周一 00:00:00，按 ticket_id 去重）
+- workload: 从 `users` 表（WHERE role='completer'）出发 LEFT JOIN `tickets` 表和 `ticket_history` 表，确保零负载用户也出现在结果中（各项计数为 0）。每人统计 assignedCount（tickets WHERE assigned_to=username AND status='assigned'）、inProgressCount（tickets WHERE assigned_to=username AND status='in_progress'）、completedThisWeekCount（ticket_history 表 LEFT JOIN tickets ON ticket_history.ticket_id = tickets.id，WHERE ticket_history.action='completed' AND tickets.assigned_to=username AND ticket_history.created_at >= 本周一 00:00:00，按 ticket_id 去重）
 - recentActivity: `ticket_history` 表 JOIN `tickets` 表（获取 ticketTitle = tickets.title），ORDER BY ticket_history.created_at DESC LIMIT 10，每条包含 id、ticketId、ticketTitle、action、actor、toStatus、createdAt
 
-所有数据库操作 SHALL 通过 Drizzle ORM API 完成，禁止原始 SQL。
+所有数据库操作 SHALL 通过 Drizzle ORM API 完成。对于 Drizzle query builder 无法直接表达的聚合（如 COUNT DISTINCT、关联子查询），允许使用 Drizzle `sql<>` 模板字面量，但禁止拼接用户输入或书写完整独立 SQL 语句。
 
 #### Scenario: admin 获取 dashboard 数据
 

@@ -11,7 +11,7 @@ TicketFlow 已有 `ticket_history` 表记录工单的每一次状态变更（cre
 **约束：**
 - 不引入新 npm 依赖（图表库等）
 - 不引入新 DB 表
-- 所有 DB 操作通过 Drizzle ORM API，禁用原始 SQL
+- 所有 DB 操作通过 Drizzle ORM API 完成。聚合查询（avgResponseMinutes/avgProcessMinutes）和去重计数（COUNT DISTINCT）允许使用 Drizzle `sql<>` 模板字面量，但禁止拼接用户输入或手写完整 SQL 语句。
 - admin + dispatcher 可见，submitter + completer 不可见
 
 ## Goals / Non-Goals
