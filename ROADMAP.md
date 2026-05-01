@@ -169,34 +169,64 @@ Dashboard 依赖 ticket_history 的查询模式：
 
 ## MVP2 阶段
 
-> 目标：围绕两大主题——**流程深化**（工单流转更完整）和**系统成熟**（从演示工具走向正式产品）。
-> MVP1 已通过 antd Progress/Statistic 覆盖 Dashboard 可视化，通过 Timeline 组件覆盖工单活动摘要，这两项不再列入 MVP2。
+> 目标：让系统从"能跑"变成"能用"。MVP1 搭好了骨架，MVP2 解决沉默、不能沟通、不能终止这三个核心体验问题。
+> MVP1 已通过 antd Progress/Statistic/Timeline 覆盖 Dashboard 可视化和工单活动摘要。
 
-### 主题一：流程深化
+三个 change，线性依赖：
 
-工单生命周期从"提交→指派→处理→完成"扩展为更真实的闭环。
+```
+① 工单评论 ──→ ② 通知系统 ──→ ③ 工单关闭/拒绝
+```
 
-| # | Change | 说明 | 复杂度 |
-|---|--------|------|--------|
-| A1 | 工单评论 | 新增 comments 表，工单详情内嵌评论区，支持完成备注 | M |
-| A2 | 工单关闭 / 拒绝 | 状态机扩展：submitted→rejected、completed→closed | S |
-| A3 | SLA 预警 | 基于 ticket_history 时间戳计算各阶段停留时长，超时标记 | M |
-| A4 | 时效报表导出 | ticket_history 数据完整，导出 CSV 效率报告 | S |
+| # | Change | 说明 | 复杂度 | 依赖 |
+|---|--------|------|--------|------|
+| 1 | 工单评论 | comments 表 + 工单详情评论区 + 完成备注。comments 写入时生成通知 | M | 无 |
+| 2 | 通知系统 | notifications 表 + Header bell icon 未读计数 + 通知列表。评论/指派/完成触发通知 | M | ① |
+| 3 | 工单关闭/拒绝 | 状态机扩展：submitted→rejected、completed→closed。拒绝需填原因 | S | ② |
 
-### 主题二：系统成熟
+### 验收标准
 
-从预置账号走向自服务，支持文件附件，操作效率提升。
+- [ ] 工单详情内可发表评论，评论列表按时间正序
+- [ ] 完成工单时可填写备注
+- [ ] 被指派/被评论/被完成时，Header bell icon 显示未读红点
+- [ ] 点击 bell 弹出通知列表，点击某条跳转到对应工单
+- [ ] dispatcher 可拒绝不合规工单（填写原因），工单状态变为 rejected
+- [ ] admin/completer 可关闭已完成工单
 
-| # | Change | 说明 | 复杂度 |
-|---|--------|------|--------|
-| B1 | 自定义注册 | 注册页 + 用户名/密码自选 + 角色默认为 submitter | M |
-| B2 | 批量操作 | 批量指派、批量关闭，checkbox + 工具栏 | S |
-| B3 | 工单附件 | 上传/下载附件，需远端存储（Cloudflare R2 或 S3） | L |
+### 核心数据
 
-### 已覆盖（不再列入）
+新增 2 张表：
 
-| 项目 | 覆盖方式 |
-|------|----------|
-| Dashboard 图表 | MVP1 antd Progress type="dashboard" + 条形进度条 + Statistic |
-| 工单活动摘要 | MVP1 Timeline + TicketDetailDrawer |
-| 移动端响应式 | antd Grid 已有基础响应式，完整移动端适配留待后续 |
+```
+comments (
+  id         TEXT PK,
+  ticket_id  TEXT NOT NULL REFERENCES tickets(id),
+  author     TEXT NOT NULL,  -- username
+  content    TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)
+
+notifications (
+  id         TEXT PK,
+  user_id    TEXT NOT NULL,  -- 通知接收者 username
+  ticket_id  TEXT NOT NULL,
+  type       TEXT NOT NULL,  -- assigned | commented | completed | rejected
+  read       INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL
+)
+```
+
+---
+
+## MVP3+ 远期方向
+
+> 以下方向有价值但不在 MVP2 范围内，以后再做推敲。
+
+- 搜索（标题/描述关键词）
+- 工单阻塞状态（blocked）
+- SLA 预警
+- 时效报表导出（CSV）
+- 自定义注册（自选用户名密码）
+- 批量操作（批量指派、批量关闭）
+- 工单附件（需 Cloudflare R2/S3）
+- 移动端响应式完整适配
