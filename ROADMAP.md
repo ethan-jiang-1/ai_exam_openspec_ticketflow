@@ -167,18 +167,36 @@ Dashboard 依赖 ticket_history 的查询模式：
 
 ---
 
-## MVP2 参考方向
+## MVP2 阶段
 
-> 在 MVP1 基础上继续演进的方向，届时再推敲。
+> 目标：围绕两大主题——**流程深化**（工单流转更完整）和**系统成熟**（从演示工具走向正式产品）。
+> MVP1 已通过 antd Progress/Statistic 覆盖 Dashboard 可视化，通过 Timeline 组件覆盖工单活动摘要，这两项不再列入 MVP2。
 
-### 沿"更可用 + 更可观"
+### 主题一：流程深化
 
-- 自定义注册（从预置账号走向自注册用户名）
-- 工单评论 / 完成备注（新增 comments 表，参考 ticket_history 模式）
-- 工单关闭 / 拒绝（状态机扩展：submitted → rejected，completed → closed）
-- 批量操作（批量指派、批量关闭）
-- Dashboard 图表（antd Charts 柱状图/饼图，基于 ticket_history 历史数据）
-- 移动端响应式（antd Grid + 响应式断点）
-- SLA 预警（ticket_history 已有状态时间戳，可计算各阶段 SLA 达标率）
-- 工单活动摘要（ticket_history 聚合 + comments 表 → 生成工单摘要视图）
-- 时效报表导出（ticket_history 数据完整，可导出 CSV 效率报告）
+工单生命周期从"提交→指派→处理→完成"扩展为更真实的闭环。
+
+| # | Change | 说明 | 复杂度 |
+|---|--------|------|--------|
+| A1 | 工单评论 | 新增 comments 表，工单详情内嵌评论区，支持完成备注 | M |
+| A2 | 工单关闭 / 拒绝 | 状态机扩展：submitted→rejected、completed→closed | S |
+| A3 | SLA 预警 | 基于 ticket_history 时间戳计算各阶段停留时长，超时标记 | M |
+| A4 | 时效报表导出 | ticket_history 数据完整，导出 CSV 效率报告 | S |
+
+### 主题二：系统成熟
+
+从预置账号走向自服务，支持文件附件，操作效率提升。
+
+| # | Change | 说明 | 复杂度 |
+|---|--------|------|--------|
+| B1 | 自定义注册 | 注册页 + 用户名/密码自选 + 角色默认为 submitter | M |
+| B2 | 批量操作 | 批量指派、批量关闭，checkbox + 工具栏 | S |
+| B3 | 工单附件 | 上传/下载附件，需远端存储（Cloudflare R2 或 S3） | L |
+
+### 已覆盖（不再列入）
+
+| 项目 | 覆盖方式 |
+|------|----------|
+| Dashboard 图表 | MVP1 antd Progress type="dashboard" + 条形进度条 + Statistic |
+| 工单活动摘要 | MVP1 Timeline + TicketDetailDrawer |
+| 移动端响应式 | antd Grid 已有基础响应式，完整移动端适配留待后续 |
