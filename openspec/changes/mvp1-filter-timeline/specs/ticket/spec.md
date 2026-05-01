@@ -49,12 +49,13 @@ interface TicketDetailDrawerProps {
    - actor（操作人 username）
    - 通过 `new Date(createdAt).toLocaleString()` 格式化的时间戳
 3. Timeline item `color` 按 action 类型区分：`created`=blue, `assigned`/`reassigned`=gold, `started`=orange, `completed`=green
-4. 当 `events` 为空数组时，显示 antd `Empty` 组件，描述为 "暂无处理记录"
+4. 当 `details` 不为 null 时（`assigned` 含 `{assignee}`，`reassigned` 含 `{assignee, prevAssignee}`），解析 JSON 并在 item 中显示指派目标信息
+5. 当 `events` 为空数组时，显示 antd `Empty` 组件，描述为 "暂无处理记录"
 
 #### Scenario: Timeline 显示处理历史
 
-- **WHEN** 传入 3 条 TicketHistoryEvent（action 分别为 created / assigned / completed）
-- **THEN** antd Timeline SHALL 渲染 3 个条目，分别显示 "创建工单"、"指派"、"完成"，每条包含 actor 和时间戳
+- **WHEN** 传入 3 条 TicketHistoryEvent（action 分别为 created / assigned / completed），其中 assigned 的 `details` 为 `{"assignee":"completer1"}`
+- **THEN** antd Timeline SHALL 渲染 3 个条目，分别显示 "创建工单"、"指派"、"完成"，每条包含 actor 和时间戳，assigned 条目额外显示指派目标 "completer1"
 
 #### Scenario: 空历史显示 Empty
 
@@ -63,5 +64,5 @@ interface TicketDetailDrawerProps {
 
 #### Scenario: 改派操作显示正确标签
 
-- **WHEN** 传入 1 条 action 为 `reassigned` 的 TicketHistoryEvent
-- **THEN** Timeline item SHALL 显示 "改派"
+- **WHEN** 传入 1 条 action 为 `reassigned` 的 TicketHistoryEvent，`details` 为 `{"assignee":"completer2","prevAssignee":"completer1"}`
+- **THEN** Timeline item SHALL 显示 "改派"，并展示指派目标 "completer2" 和原处理人 "completer1"

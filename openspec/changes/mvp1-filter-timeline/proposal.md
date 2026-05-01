@@ -4,7 +4,7 @@
 
 ## What Changes
 
-- 三个工作台 Table 启用 antd 内置前端分页（默认 pageSize=20，支持 showSizeChanger）
+- 三个工作台 Table 启用 antd 内置前端分页（默认 pageSize=10，支持 showSizeChanger）
 - 三个工作台 Table 添加状态列筛选（antd Table column `filters`），允许用户按 submitted/assigned/in_progress/completed 过滤
 - 抽取共享 `TicketDetailDrawer` 组件（含 antd `Timeline` 展示工单处理历史），替换三个工作台中重复的 Drawer 实现
 - 提交者工作台工单详情展示完整处理时间线（调用 `getTicketHistory`，基于 ticket_history 数据）

@@ -7,7 +7,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
-- 三个工作台 Table 启用前端分页（pageSize=20，支持 showSizeChanger）
+- 三个工作台 Table 启用前端分页（pageSize=10，支持 showSizeChanger）
 - 三个工作台 Table 状态列增加筛选 UI（antd column `filters`）
 - 抽取共享 `TicketDetailDrawer` 组件，三个工作台统一使用，消除重复代码
 - Drawer 内集成 `Timeline` 组件（基于 `getTicketHistory` API），提交者视图中展示完整处理时间线
@@ -81,4 +81,4 @@ apps/web/src/components/
 ## Open Questions
 
 1. 调度者和完成者也需要看到 Timeline 吗？还是仅提交者？当前设计 Timeline 在三个工作台 Drawer 均可显示（数据来源是 `ticket.id` 通用接口），但可加 `showTimeline` prop 控制。
-2. 分页 pageSize 默认 20 是否合适？需要用户可调整到 50/100 吗？（`showSizeChanger` 已支持）
+2. ~~分页 pageSize 默认 20 是否合适？~~ 已确定：默认 10，选项 10/20/50/100/200，通过 `showSizeChanger` 支持

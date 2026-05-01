@@ -2,12 +2,12 @@
 
 ### Requirement: WF-003 提交者工作台
 
-`/workbench/submitter` SHALL 显示提交者工作台，包含：antd `Form` 创建工单表单（居中布局 `maxWidth: 480px`，`Form.Item` + `Input` 标题（`maxLength={200}`、`showCount`、`rules: [{ required: true }, { max: 200 }]`）+ `Input.TextArea` 描述（`maxLength={2000}`、`showCount`、`rules: [{ max: 2000 }]`）+ antd `Button` 提交按钮）和 antd `Table` 工单列表（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100', '200'] }}`，"创建时间"列 `responsive: ['lg']`）。状态列 SHALL 配置 antd Table column `filters`，选项为 submitted / assigned / in_progress / completed（使用 `STATUS_LABELS` 中文映射），`filterSearch: false`，`onFilter` 通过 status 值匹配。创建工单时 SHALL 不传 `createdBy` 字段，后端从 auth context 获取。前端 `createTicket` 函数 SHALL 删除 `createdBy` 参数，仅接受 `{ title, description }`。工单列表 SHALL 仅显示 `createdBy === user.username` 的工单（通过 `getTickets()` 获取全部后在客户端过滤）。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出共享 `TicketDetailDrawer` 组件（接收 `ticket`、`open`、`onClose`、`showTimeline=true` props），展示工单详情和处理时间线。
+`/workbench/submitter` SHALL 显示提交者工作台，包含：antd `Form` 创建工单表单（居中布局 `maxWidth: 480px`，`Form.Item` + `Input` 标题（`maxLength={200}`、`showCount`、`rules: [{ required: true }, { max: 200 }]`）+ `Input.TextArea` 描述（`maxLength={2000}`、`showCount`、`rules: [{ max: 2000 }]`）+ `Form.Item` + `Select` 优先级（选项 low/medium/high，`initialValue="medium"`）+ `Form.Item` + `DatePicker` 截止日期 + antd `Button` 提交按钮）和 antd `Table` 工单列表（`pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100', '200'] }}`，"创建时间"列 `responsive: ['lg']`）。状态列 SHALL 配置 antd Table column `filters`，选项为 submitted / assigned / in_progress / completed（使用 `STATUS_LABELS` 中文映射），`filterSearch: false`，`onFilter` 通过 status 值匹配。创建工单时 SHALL 调用 `createTicket({ title, description, priority, dueDate })`，不传 `createdBy`（后端从 auth context 获取）。工单列表 SHALL 仅显示 `createdBy === user.username` 的工单（通过 `getTickets()` 获取全部后在客户端过滤）。标题列 SHALL 为可点击链接（`ellipsis: true`），点击后 SHALL 弹出共享 `TicketDetailDrawer` 组件（接收 `ticket`、`open`、`onClose`、`showTimeline=true` props），展示工单详情和处理时间线。
 
 #### Scenario: 创建工单不传 createdBy
 
 - **WHEN** submitter 用户在 antd Form 中填写 title 和 description，点击提交
-- **THEN** SHALL 调用 `POST /api/tickets`，body 仅包含 `{ title, description }`，不包含 `createdBy`。后端 SHALL 从 auth context 自动填充 `createdBy`
+- **THEN** SHALL 调用 `POST /api/tickets`，body 包含 `{ title, description, priority, dueDate }`，不包含 `createdBy`。后端 SHALL 从 auth context 自动填充 `createdBy`
 
 #### Scenario: 工单列表仅显示自己创建的
 
@@ -27,7 +27,7 @@
 #### Scenario: 点击标题弹出 Drawer 查看详情和时间线
 
 - **WHEN** 提交者在工单列表中点击某条工单的标题
-- **THEN** SHALL 弹出共享 TicketDetailDrawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、创建时间、描述，并使用 antd Timeline 展示该工单的完整处理历史
+- **THEN** SHALL 弹出共享 TicketDetailDrawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、优先级（Tag）、截止日期、创建时间、描述，并使用 antd Timeline 展示该工单的完整处理历史
 
 #### Scenario: Table 分页显示
 
@@ -80,7 +80,7 @@
 #### Scenario: 点击标题弹出 Drawer 查看详情和时间线
 
 - **WHEN** 调度者在工单列表中点击某条工单的标题
-- **THEN** SHALL 弹出共享 TicketDetailDrawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、创建时间、描述，并使用 antd Timeline 展示该工单的完整处理历史
+- **THEN** SHALL 弹出共享 TicketDetailDrawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、优先级（Tag）、截止日期、创建时间、描述，并使用 antd Timeline 展示该工单的完整处理历史
 
 #### Scenario: Table 分页显示
 
@@ -119,7 +119,7 @@
 #### Scenario: 点击标题弹出 Drawer 查看详情和时间线
 
 - **WHEN** 完成者在工单列表中点击某条工单的标题
-- **THEN** SHALL 弹出共享 TicketDetailDrawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、创建时间、描述，并使用 antd Timeline 展示该工单的完整处理历史
+- **THEN** SHALL 弹出共享 TicketDetailDrawer，使用 Descriptions 展示该工单的状态（Tag）、创建者、指派给、优先级（Tag）、截止日期、创建时间、描述，并使用 antd Timeline 展示该工单的完整处理历史
 
 #### Scenario: Table 分页显示
 
