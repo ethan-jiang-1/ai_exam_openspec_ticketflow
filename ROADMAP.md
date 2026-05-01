@@ -107,10 +107,10 @@
 
 ### MVP1 验收标准
 
-- [ ] Session 24h TTL，过期自动跳转登录页并提示"会话已过期，请重新登录"
-- [ ] 工单可重新指派（dispatcher 在 submitted 或 assigned 状态均可改 assignee）
-- [ ] 三个工作台 Table 支持前端分页 + 状态筛选
-- [ ] 提交者工单详情展示完整处理时间线（基于 ticket_history）
+- [x] Session 24h TTL，过期自动跳转登录页并提示"会话已过期，请重新登录" ✅ mvp1-session-ttl
+- [x] 工单可重新指派（dispatcher 在 submitted 或 assigned 状态均可改 assignee） ✅ mvp1-ticket-history
+- [x] 三个工作台 Table 支持前端分页 + 状态筛选 ✅ mvp1-filter-timeline
+- [x] 提交者工单详情展示完整处理时间线（基于 ticket_history） ✅ mvp1-filter-timeline
 - [ ] Dashboard 统计页：总览 + 吞吐量 + 效率 + 人员负载
 
 ### 核心数据设计
@@ -158,10 +158,10 @@ Dashboard 依赖 ticket_history 的查询模式：
 
 | # | Change | 规模 | 核心交付 | 依赖 |
 |---|--------|------|----------|------|
-| 1 | `mvp1-session-ttl` | S | SessionStore 24h TTL + cookie maxAge + AuthContext 401 拦截 + 过期提示 | 无 |
-| 2 | `mvp1-ticket-history` | M | ticket_history schema + 迁移 + 回填 + 所有状态变更写入历史 + assign 扩展支持重新指派 + `GET /api/tickets/:id/history` | 1 |
-| 3 | `mvp1-filter-timeline` | M | 共享 `TicketDetailDrawer`（含 Timeline）+ 三个工作台 Table 分页 + 状态列筛选 + 提交者时间线视图 | 2 |
-| 4 | `mvp1-dashboard` | M | `GET /api/dashboard`（overview+throughput+efficiency+workload）+ DashboardPage + 导航入口 `/dashboard` | 2 |
+| 1 | `mvp1-session-ttl` | S | SessionStore 24h TTL + cookie maxAge + AuthContext 401 拦截 + 过期提示 | 无 | ✓ |
+| 2 | `mvp1-ticket-history` | M | ticket_history schema + 迁移 + 回填 + 所有状态变更写入历史 + assign 扩展支持重新指派 + `GET /api/tickets/:id/history` | 1 | ✓ |
+| 3 | `mvp1-filter-timeline` | M | 共享 `TicketDetailDrawer`（含 Timeline）+ 三个工作台 Table 分页 + 状态列筛选 + 提交者时间线视图 | 2 | ✓ |
+| 4 | `mvp1-dashboard` | M | `GET /api/dashboard`（overview+throughput+efficiency+workload）+ DashboardPage + 导航入口 `/dashboard` | 2 | 🔜 |
 
 ③ 和 ④ 无相互依赖，可并行。
 
