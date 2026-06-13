@@ -81,6 +81,6 @@
 
 - [x] 5.9 验证 `pnpm smoke -- --url http://localhost:5173` 可脱离 skill 独立运行，stdout 输出 JSON [BS-006]
 
-- [x] 5.10 验证 `--clicks 3` 和 `--readonly` 参数生效
+- [x] 5.10 验证 `--clicks 3`、`--readonly`、`--headed` 参数生效
 
 - [x] 5.11 验证 exit code：健康 → 0，异常 → 1

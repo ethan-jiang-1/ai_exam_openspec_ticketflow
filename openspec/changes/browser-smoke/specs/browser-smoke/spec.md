@@ -15,7 +15,7 @@
 #### Scenario: 脚本接收 URL 参数
 
 - **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url https://example.com`
-- **THEN** 脚本 SHALL 使用 Playwright 启动 headless Chromium，导航到该 URL，执行全部四个阶段，输出 JSON 报告到 stdout 并写入文件
+- **THEN** 脚本 SHALL 使用 Playwright 启动 Chromium（默认 headless，可通过 `--headed` 打开可见窗口），导航到该 URL，执行全部四个阶段，输出 JSON 报告到 stdout 并写入文件
 
 #### Scenario: 默认 click 数量
 
@@ -31,6 +31,12 @@
 
 - **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> --readonly`
 - **THEN** EXPLORE 阶段 SHALL 排除可能产生写操作的元素（button[type="submit"]、带有"删除""确认"等文本的按钮），仅点击链接、菜单项等安全元素
+
+#### Scenario: headed 模式
+
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> --headed`
+- **THEN** 脚本 SHALL 启动可见 Chromium 窗口（非 headless），方便人工观察浏览器行为
+- **AND** 未传 `--headed` 时 SHALL 默认使用 headless 模式
 
 #### Scenario: Playwright 未安装时的友好报错
 

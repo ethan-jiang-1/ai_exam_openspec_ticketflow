@@ -37,7 +37,7 @@ TicketFlow 当前有三层测试/验证手段，本 change 填补的空白是**�
 
 `@playwright/test` 已经作为 devDependency 安装。但 smoke 脚本不用它的 test runner（describe/test/expect），而是直接 `import { chromium }` 裸调。
 
-**理由**: smoke test 不需要 fixture、parallel、reporter 等 test runner 特性。它是一个线性脚本：打开 → 观察 → 点击 → 报告。直接调 API 更灵活（可以任意中间截图、动态改策略），且不依赖 `playwright.config.ts`。
+**理由**: smoke test 不需要 fixture、parallel、reporter 等 test runner 特性。它是一个线性脚本：打开 → 观察 → 点击 → 报告。直接调 API 更灵活（可以任意中间截图、动态改策略），且不依赖 `playwright.config.ts`。通过 `--headed` 参数可在可见窗口和 headless 之间切换，默认 headless。
 
 **备选**: 用 `@playwright/test` 写成一个 spec 文件。但那样受限于 test runner 的生命周期，不适合作为独立工具从 CLI 或 skill 调用。
 

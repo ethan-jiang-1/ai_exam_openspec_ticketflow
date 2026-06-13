@@ -31,7 +31,7 @@ This is useful for CI pipelines or cron jobs where Claude Code is not available.
 | `/browser-smoke` | Run smoke test against the default URL |
 | `/browser-smoke <url>` | Run smoke test against a specific URL |
 | `/browser-smoke default-url <url>` | Change the default URL |
-| `/browser-smoke <url> --clicks N --readonly` | Run with custom options |
+| `/browser-smoke <url> --clicks N --readonly --headed` | Run with custom options |
 
 ## State File
 
@@ -60,7 +60,7 @@ When the user invokes `/browser-smoke` or `/browser-smoke <url>`:
 
 3. **Run the script**:
    ```bash
-   node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> [--clicks N] [--readonly] [--output-dir <dir>]
+   node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> [--clicks N] [--readonly] [--headed] [--output-dir <dir>]
    ```
    Pass through any additional flags the user provided.
 

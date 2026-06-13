@@ -1,6 +1,6 @@
 /**
  * Browser smoke test — Playwright-driven deployment health check.
- * Usage: node scripts/browser-smoke.mjs --url <url> [--clicks N] [--readonly] [--pretty] [--output-dir <dir>]
+ * Usage: node scripts/browser-smoke.mjs --url <url> [--clicks N] [--readonly] [--headed] [--pretty] [--output-dir <dir>]
  */
 
 import { chromium } from '@playwright/test'
