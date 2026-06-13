@@ -1,6 +1,6 @@
 /**
  * Browser smoke test — Playwright-driven deployment health check.
- * Usage: node scripts/browser-smoke.mjs --url <url> [--clicks N] [--readonly] [--headed] [--pretty] [--output-dir <dir>]
+ * Usage: node scripts/browser-smoke.mjs --url <url> [--clicks N] [--readonly] [--headed] [--wait MS] [--pretty] [--output-dir <dir>]
  */
 
 import { chromium } from '@playwright/test'
@@ -16,7 +16,7 @@ const root = resolve(__dirname, '../../../..')
 
 function parseArgs() {
   const args = process.argv.slice(2)
-  const opts = { url: '', clicks: 8, readonly: false, pretty: false, outputDir: '', headed: false }
+  const opts = { url: '', clicks: 8, readonly: false, pretty: false, outputDir: '', headed: false, wait: 5000 }
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--url': opts.url = args[++i]; break
@@ -25,6 +25,7 @@ function parseArgs() {
       case '--pretty': opts.pretty = true; break
       case '--output-dir': opts.outputDir = args[++i]; break
       case '--headed': opts.headed = true; break
+      case '--wait': opts.wait = parseInt(args[++i], 10); break
     }
   }
   if (!opts.url) {
@@ -496,14 +497,19 @@ async function main() {
     }
     timing = await phaseLoad(page)
 
-    // Wait for SPA to render (look for common app-shell markers or wait up to 3s)
-    try {
-      await Promise.race([
-        page.waitForSelector('#root > :not(script):not(style)', { timeout: 3000 }),
-        page.waitForSelector('.ant-layout, .ant-menu, .ant-btn, .ant-form, .ant-input, h1, h2, main, nav, header', { timeout: 3000 }),
-        page.waitForTimeout(3000),
-      ])
-    } catch { /* SPA render wait is best-effort; proceed with whatever loaded */ }
+    // Wait for SPA to render (configurable via --wait, default 5000ms)
+    {
+      const deadline = Date.now() + opts.wait
+      let ready = false
+      while (Date.now() < deadline && !ready) {
+        await page.waitForTimeout(500)
+        ready = await page.evaluate(() => {
+          const textLen = document.body ? document.body.innerText.trim().length : 0
+          const hasAntd = !!document.querySelector('.ant-layout,.ant-menu,.ant-btn,.ant-form,.ant-input,.ant-table,.ant-tag,.ant-select')
+          return textLen > 20 || hasAntd
+        }).catch(() => false)
+      }
+    }
 
     // Phase 2: SCAN
     pageContent = await phaseScan(page)
