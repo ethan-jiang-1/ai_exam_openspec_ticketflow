@@ -1,18 +1,21 @@
 # browser-smoke Specification
 
 ## Purpose
-浏览器冒烟测试能力规范——Playwright 驱动的部署存活检测工具，测加载速度、读 DOM 内容、半随机点击交互元素、捕获异常，输出结构化 JSON 报告。通过 Claude Code skill 调用并解读报告。
+
+`/browser-smoke` skill 的行为规范——Claude Code 浏览器冒烟测试入口，支持 on/off 开关，调用底层 Playwright 脚本对部署 URL 执行存活检测，产出 JSON（机器）和 Markdown（人读）双份报告，落盘到 `data/smoke-reports/`。
+
+脚本 `.claude/skills/browser-smoke/scripts/browser-smoke.mjs` 是 skill 的底层引擎，规范其 CLI 接口、四阶段探测流程、错误收集和报告格式。
 
 ## ADDED Requirements
 
 ### Requirement: BS-001 浏览器冒烟测试脚本
 
-项目 SHALL 包含 `scripts/browser-smoke.mjs`，一个独立的 Node.js 脚本，使用 Playwright 直接调 chromium API（不使用 `@playwright/test` 的 test runner），对目标 URL 执行四个阶段的冒烟检测：LOAD（加载测速）→ SCAN（DOM 内容摘要）→ EXPLORE（半随机交互）→ REPORT（结构化输出）。
+项目 SHALL 包含 `.claude/skills/browser-smoke/scripts/browser-smoke.mjs`，一个独立的 Node.js 脚本，使用 Playwright 直接调 chromium API（不使用 `@playwright/test` 的 test runner），对目标 URL 执行四个阶段的冒烟检测：LOAD（加载测速）→ SCAN（DOM 内容摘要）→ EXPLORE（半随机交互）→ REPORT（结构化输出 + 文件落盘）。
 
 #### Scenario: 脚本接收 URL 参数
 
-- **WHEN** 执行 `node scripts/browser-smoke.mjs --url https://example.com`
-- **THEN** 脚本 SHALL 使用 Playwright 启动 headless Chromium，导航到该 URL，执行全部四个阶段，输出 JSON 报告到 stdout
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url https://example.com`
+- **THEN** 脚本 SHALL 使用 Playwright 启动 headless Chromium，导航到该 URL，执行全部四个阶段，输出 JSON 报告到 stdout 并写入文件
 
 #### Scenario: 默认 click 数量
 
@@ -21,12 +24,12 @@
 
 #### Scenario: 自定义 click 数量
 
-- **WHEN** 执行 `node scripts/browser-smoke.mjs --url <url> --clicks 3`
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> --clicks 3`
 - **THEN** EXPLORE 阶段 SHALL 点击最多 3 个可交互元素
 
 #### Scenario: 只读模式
 
-- **WHEN** 执行 `node scripts/browser-smoke.mjs --url <url> --readonly`
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> --readonly`
 - **THEN** EXPLORE 阶段 SHALL 排除可能产生写操作的元素（button[type="submit"]、带有"删除""确认"等文本的按钮），仅点击链接、菜单项等安全元素
 
 #### Scenario: Playwright 未安装时的友好报错
@@ -152,12 +155,23 @@ EXPLORE 阶段 SHALL 按优先级从页面中选择可交互元素并依次点�
 
 ### Requirement: BS-006 结构化报告与退出码
 
-脚本 SHALL 将全部探测结果以 JSON 格式输出到 stdout，并按探测结果设置退出码。
+脚本 SHALL 将全部探测结果以 JSON 格式输出到 stdout，并同时写入 `data/smoke-reports/` 目录下的文件，按探测结果设置退出码。
 
 #### Scenario: 报告 JSON 结构
 
 - **WHEN** 四个阶段全部完成
 - **THEN** stdout 输出的 JSON SHALL 包含以下顶层字段：`url`、`timestamp`、`timing`、`pageContent`、`errors`、`explorations`、`verdict`
+
+#### Scenario: JSON 报告落盘
+
+- **WHEN** 脚本执行且 `--output-dir` 未指定
+- **THEN** SHALL 将 JSON 报告写入 `data/smoke-reports/<ISO-timestamp>.json`
+- **AND** 目录 `data/smoke-reports/` 如不存在 SHALL 自动创建
+
+#### Scenario: 自定义输出目录
+
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> --output-dir /tmp/smoke`
+- **THEN** SHALL 将报告写入指定目录
 
 #### Scenario: 健康判定规则
 
@@ -180,14 +194,62 @@ EXPLORE 阶段 SHALL 按优先级从页面中选择可交互元素并依次点�
 - **WHEN** 执行脚本时带有 `--pretty` 参数
 - **THEN** stdout 输出的 JSON SHALL 格式化缩进（`JSON.stringify(data, null, 2)`）
 
-### Requirement: BS-007 Claude Code Skill 集成
+### Requirement: BS-007 Claude Code Skill 作为主入口
 
-项目 SHALL 包含 `.claude/skills/browser-smoke/SKILL.md`，使 Claude Code 可调用冒烟测试脚本并解读报告。
+项目 SHALL 包含 `.claude/skills/browser-smoke/SKILL.md`，作为冒烟测试的用户主入口。Skill 负责接收用户指令、管理 on/off 状态、调用底层脚本、解读报告并用中文向用户汇报。
 
-#### Scenario: Skill 调用脚本
+#### Scenario: Skill 调用脚本执行冒烟
 
 - **WHEN** 用户在 Claude Code 中输入 `/browser-smoke https://example.com`
-- **THEN** Claude SHALL 执行 `node scripts/browser-smoke.mjs --url https://example.com`，读 JSON 输出，用中文向用户汇报
+- **THEN** Claude SHALL 检查 `.browser-smoke-state.json` 状态
+- **AND** 若启用（enabled: true），SHALL 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url https://example.com`
+- **AND** 读 JSON 输出，用中文向用户汇报
+- **AND** 告知用户报告文件路径（JSON + Markdown）
+
+#### Scenario: Skill 在关闭状态下拒绝执行
+
+- **WHEN** 用户在 Claude Code 中输入 `/browser-smoke <url>`
+- **AND** `.browser-smoke-state.json` 中 `enabled` 为 `false`
+- **THEN** Claude SHALL 回复："冒烟测试已关闭，输入 `/browser-smoke on` 开启"
+- **AND** SHALL NOT 执行冒烟测试脚本
+
+#### Scenario: Skill 开启冒烟测试
+
+- **WHEN** 用户输入 `/browser-smoke on`
+- **THEN** Claude SHALL 读取 `.browser-smoke-state.json`，仅将 `enabled` 改为 `true`，保留 `defaultUrl` 不变，写回文件
+- **AND** SHALL 回复："冒烟测试已开启 ✅"
+
+#### Scenario: Skill 关闭冒烟测试
+
+- **WHEN** 用户输入 `/browser-smoke off`
+- **THEN** Claude SHALL 读取 `.browser-smoke-state.json`，仅将 `enabled` 改为 `false`，保留 `defaultUrl` 不变，写回文件
+- **AND** SHALL 回复："冒烟测试已关闭，需要时输入 `/browser-smoke on` 重新开启"
+
+#### Scenario: Skill 使用默认 URL
+
+- **WHEN** 用户输入 `/browser-smoke`（不带 URL）
+- **AND** `.browser-smoke-state.json` 中 `enabled` 为 `true`
+- **THEN** Claude SHALL 读取 `defaultUrl` 字段
+- **AND** SHALL 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <defaultUrl>`
+- **AND** 用中文向用户汇报结果
+
+#### Scenario: Skill 覆盖默认 URL
+
+- **WHEN** 用户输入 `/browser-smoke https://staging.example.com`
+- **THEN** SHALL 使用用户指定的 URL 执行冒烟（忽略 defaultUrl）
+
+#### Scenario: Skill 修改默认 URL
+
+- **WHEN** 用户输入 `/browser-smoke default-url https://new-deploy.workers.dev`
+- **THEN** Claude SHALL 更新 `.browser-smoke-state.json` 中的 `defaultUrl` 字段（保留 `enabled` 不变）
+- **AND** SHALL 回复："默认测试 URL 已更新为 https://new-deploy.workers.dev"
+
+#### Scenario: Skill 查看状态
+
+- **WHEN** 用户输入 `/browser-smoke status`
+- **THEN** Claude SHALL 读取 `.browser-smoke-state.json`，回复当前状态和默认 URL：
+  - "冒烟测试当前状态：已开启 ✅，默认 URL：https://..." 或
+  - "冒烟测试当前状态：已关闭 ❌，默认 URL：https://..."
 
 #### Scenario: Skill 解读报告
 
@@ -198,8 +260,35 @@ EXPLORE 阶段 SHALL 按优先级从页面中选择可交互元素并依次点�
   - 交互探测结果（点了几个、几个有反应、几个报错）
   - 综合判定（🟢 健康 / 🟡 警告 / 🔴 异常）
   - 如有异常，列出每条 error 详情
+  - 报告文件路径
 
 #### Scenario: Skill 参数透传
 
 - **WHEN** 用户输入 `/browser-smoke <url> --clicks 3 --readonly`
 - **THEN** Claude SHALL 将额外参数原样传递给脚本
+
+### Requirement: BS-008 人可读报告
+
+脚本 SHALL 在生成 JSON 报告的同时，产出人可读的中文 Markdown 报告，写入与 JSON 同目录、同时间戳的 `.md` 文件。
+
+#### Scenario: Markdown 报告生成
+
+- **WHEN** 脚本完成所有探测
+- **THEN** SHALL 生成 `data/smoke-reports/<ISO-timestamp>.md`，内容为中文叙述，包含：
+  - 标题：`# 浏览器冒烟测试报告`
+  - 基本信息：测试 URL、时间戳
+  - 加载速度：详细指标（firstByte/domReady/fullLoad）和等级判定
+  - 页面内容：标题、可交互元素数量、文本片段摘要
+  - 交互探测：点击详情表格（元素、动作、结果、是否有异常）
+  - 异常列表：如有 console error、network error、antd error，逐一列出
+  - 综合判定：🟢/🟡/🔴 及 verdict 说明
+
+#### Scenario: Markdown 报告在无异常时简洁呈现
+
+- **WHEN** 所有探测无异常
+- **THEN** Markdown 报告 SHALL 以简洁为主，不列出空错误表，突出"正常运行"
+
+#### Scenario: Markdown 报告在有异常时详细展开
+
+- **WHEN** 探测发现异常
+- **THEN** Markdown 报告 SHALL 将异常详情展开，包含具体的错误消息、URL、状态码

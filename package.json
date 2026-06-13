@@ -17,7 +17,8 @@
     "e2e:local": "E2E_BASE_URL=http://localhost:5173 pnpm e2e",
     "e2e:remote": "E2E_BASE_URL=https://ai-exam-openspec-ticketflow.ethan1-jiang.workers.dev pnpm e2e",
     "e2e:diagnose": "node scripts/e2e-diagnose.mjs",
-    "e2e:investigate": "node scripts/e2e-investigate-remote.mjs"
+    "e2e:investigate": "node scripts/e2e-investigate-remote.mjs",
+    "smoke": "node .claude/skills/browser-smoke/scripts/browser-smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

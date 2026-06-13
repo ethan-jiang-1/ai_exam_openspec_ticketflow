@@ -43,3 +43,7 @@ apps/web/dist/
 test-results/
 playwright-report/
 tests/e2e/screenshots/
+
+# Browser smoke test
+.browser-smoke-state.json
+data/smoke-reports/

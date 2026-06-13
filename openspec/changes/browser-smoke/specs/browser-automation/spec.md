@@ -4,11 +4,11 @@
 
 ### Requirement: BA-006 Smoke 测试模式
 
-Playwright 浏览器自动化基础设施 SHALL 支持第三种使用模式：smoke test 模式。该模式区别于 E2E 测试模式（带断言的 pass/fail）和诊断模式（人工交互），用于对已部署的 URL 执行粗粒度的存活检测。Smoke 模式通过 `scripts/browser-smoke.mjs` 实现，直接调用 Playwright 的 chromium API 而非通过 test runner。
+Playwright 浏览器自动化基础设施 SHALL 支持第三种使用模式：smoke test 模式。该模式区别于 E2E 测试模式（带断言的 pass/fail）和诊断模式（人工交互），用于对已部署的 URL 执行粗粒度的存活检测。Smoke 模式通过 `.claude/skills/browser-smoke/scripts/browser-smoke.mjs` 实现，直接调用 Playwright 的 chromium API 而非通过 test runner。
 
 #### Scenario: Smoke 模式区别于 E2E 测试模式
 
-- **WHEN** 执行 `node scripts/browser-smoke.mjs --url <url>`
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url>`
 - **THEN** SHALL 启动 headless Chromium（与 E2E 测试一致）
 - **AND** SHALL NOT 使用 `@playwright/test` 的 test runner（test/describe/expect）
 - **AND** SHALL NOT 读取 `tests/e2e/playwright.config.ts`
@@ -17,7 +17,7 @@ Playwright 浏览器自动化基础设施 SHALL 支持第三种使用模式：sm
 
 #### Scenario: Smoke 模式区别于诊断模式
 
-- **WHEN** 执行 `node scripts/browser-smoke.mjs --url <url>`
+- **WHEN** 执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url>`
 - **THEN** SHALL 自动完成全部探测后退出，不保持浏览器打开
 - **AND** SHALL 有明确的 pass/fail 判定（verdict + exit code）
 - **AND** SHALL NOT 需要人工交互
@@ -54,5 +54,5 @@ Smoke 测试模式 SHALL 输出结构化 JSON 报告，并通过退出码反映�
 #### Scenario: `pnpm smoke` 快捷脚本
 
 - **WHEN** 开发者在根目录执行 `pnpm smoke -- --url <url>`
-- **THEN** SHALL 等价于执行 `node scripts/browser-smoke.mjs --url <url>`
-- **AND** package.json 的 `scripts` 中 SHALL 包含 `"smoke": "node scripts/browser-smoke.mjs"`
+- **THEN** SHALL 等价于执行 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url>`
+- **AND** package.json 的 `scripts` 中 SHALL 包含 `"smoke": "node .claude/skills/browser-smoke/scripts/browser-smoke.mjs"`

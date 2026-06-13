@@ -1,28 +1,29 @@
 ## Context
 
-TicketFlow 当前有三层测试/验证手段：
+本 change 的交付物是一个 **Claude Code skill**（`/browser-smoke`），不是传统的代码模块。它的用户体验是：
 
 ```
-API 层                    浏览器层
-──────                    ────────
-e2e-smoke.mjs             tests/e2e/*.spec.ts        e2e-investigate-remote.mjs
-fetch 调 API              Playwright test runner     Playwright 裸调
-完整断言 ✅                精确断言 ✅                 无断言 ❌
-自己启动 server           默认连 localhost            调查远程部署
+用户: /browser-smoke https://xxx.workers.dev
+Claude: 正在检测...
+        
+        🟢 TicketFlow 部署正常
+        加载 2.3s（正常）| 12 个可交互元素 | 点击 8 处全部正常
+        无 console error，无网络错误
+        报告已保存到 data/smoke-reports/2026-06-13T14-32-05.json
 ```
 
-`e2e-smoke.mjs` 最接近"部署后验证"的形态——20+ 个完整断言，pass/fail 计数，exit code。但它不碰浏览器，验证不了前端构建是否正确、JS 是否加载、antd 组件是否渲染。`e2e-investigate-remote.mjs` 能用浏览器打开远程部署，但它只是诊断工具，没有 pass/fail 判断。
+skill 的底层是一个 Playwright 脚本 `.claude/skills/browser-smoke/scripts/browser-smoke.mjs`，但它只是引擎——用户不直接跟脚本交互，全部通过 skill。脚本也可以脱离 skill 独立运行（CI、cron），但日常使用的入口是 skill。
 
-缺失的是一个**用真实浏览器打开部署 URL，粗略判断是否存活**的工具。
+TicketFlow 当前有三层测试/验证手段，本 change 填补的空白是**用真实浏览器打开部署 URL，粗略判断是否存活**：
 
 ## Goals / Non-Goals
 
 **Goals:**
-- 脚本用 Playwright 打开任意 URL，获取 Navigation Timing 测速
-- 读取 DOM 内容摘要（可见文本、可交互元素列表、是否有错误关键词）
-- 半随机选择可交互元素点击，观察每次点击后是否有异常（console error、network 4xx/5xx、antd error message、白屏）
-- 输出结构化 JSON 报告到 stdout，exit code 反映结果
-- Claude Code skill 包装：调用脚本、解读 JSON、用自然语言汇报给用户
+- 交付一个 Claude Code skill `/browser-smoke`，用户通过它与冒烟测试交互
+- 支持 on/off 开关：`/browser-smoke on` 启用、`/browser-smoke off` 关闭，状态持久化
+- skill 底层调用 Playwright 脚本，测速、读 DOM、半随机点击、收集错误
+- 报告落盘到 `data/smoke-reports/<timestamp>.json`，可回查历史
+- 脚本可脱离 skill 独立运行（`pnpm smoke`），输出 JSON 到 stdout + 文件
 
 **Non-Goals:**
 - 不做精确的 E2E 断言（那是 tests/e2e/ 的职责）
@@ -73,9 +74,11 @@ Phase 4: REPORT   — 汇总输出 JSON
 
 **理由**: 优先级保证点到「可能有事发生」的元素，而不是点到空白区。8 个上限保证 30 秒内完成。
 
-### Decision 4: 报告格式 — JSON to stdout
+### Decision 4: 报告格式 — JSON to stdout + 双文件落盘
 
-脚本输出单行 JSON（或 `--pretty` 时格式化），关键字段：
+脚本输出结构化 JSON 到 stdout（供管道消费），同时将报告写入 `data/smoke-reports/` 目录下两份文件：`<timestamp>.json`（机器可读）和 `<timestamp>.md`（人可读中文报告）。
+
+JSON 关键字段：
 
 ```json
 {
@@ -89,8 +92,9 @@ Phase 4: REPORT   — 汇总输出 JSON
   },
   "pageContent": {
     "title": "TicketFlow",
-    "visibleTextSample": ["...", "..."],  // 前 20 个可见文本片段
+    "visibleTextSample": ["...", "..."],
     "interactiveCount": 12,
+    "interactiveBreakdown": { "buttons": 3, "links": 5, "inputs": 2, "selects": 1, "menuItems": 1 },
     "hasErrorKeywords": false
   },
   "errors": {
@@ -113,19 +117,70 @@ Phase 4: REPORT   — 汇总输出 JSON
 
 **理由**: JSON 可被脚本消费（CI pipeline 可解析退出码和字段），同时 Claude 可读 JSON 翻译成人话。
 
-### Decision 5: Skill 定位 — 调用者 + 翻译者
+### Decision 5: Skill 是主交付物，脚本是引擎
 
-Skill 不实现任何测试逻辑，只做两件事：
-1. 调用 `node scripts/browser-smoke.mjs --url <url>` 
-2. 读 JSON 输出，翻译成用户可理解的中文报告
+Skill（`.claude/skills/browser-smoke/SKILL.md`）是本 change 的主要交付物，用户通过 `/browser-smoke` 与整个冒烟测试系统交互。脚本 `.claude/skills/browser-smoke/scripts/browser-smoke.mjs` 是底层引擎——负责浏览器自动化、数据采集、报告生成，但它不直接面向用户。
 
-**理由**: 保持 skill 薄，逻辑在脚本里。脚本可以脱离 Claude Code 独立跑（CI、cron 等），skill 是用户体验层。
+Skill 的职责：
+1. 接收用户输入（URL 可选、on/off/status/default-url 命令、额外参数）
+2. 管理状态文件 `.browser-smoke-state.json`（on/off 开关 + 默认 URL）
+3. 未传 URL 时使用状态文件中的 `defaultUrl`（项目部署地址）
+4. 调用脚本 `node .claude/skills/browser-smoke/scripts/browser-smoke.mjs --url <url> ...`
+5. 读 JSON 输出，翻译成中文报告呈现给用户
+6. 告知用户报告文件落盘位置
+
+**理由**: skill 是用户体验层，脚本可脱离 skill 独立运行（CI、cron 等场景）。两者通过 JSON 耦合——脚本只管产出结构化数据，skill 管解读和呈现。
 
 ### Decision 6: 依赖 — 复用已有 Playwright
 
 不新增 npm 依赖。`@playwright/test` 已在 devDependencies 中，其 `playwright` 或 `playwright-core` 可直接 import chromium。
 
 **理由**: 遵循「新增依赖必须显式 task」的约定——既然已经装了 Playwright，直接复用即可。如果 playwright-core 未安装，加一个 task 检查。
+
+### Decision 7: On/Off 开关 + 默认 URL
+
+Skill 状态文件 `.browser-smoke-state.json` 存储两项配置：开关状态和默认测试 URL。
+
+```json
+{
+  "enabled": true,
+  "defaultUrl": "https://ai-exam-openspec-ticketflow.ethan1-jiang.workers.dev"
+}
+```
+
+Skill 指令：
+
+```
+/browser-smoke on                   → 启用
+/browser-smoke off                  → 关闭
+/browser-smoke status               → 显示当前状态和默认 URL
+/browser-smoke                      → 使用 defaultUrl 执行冒烟（无参数时）
+/browser-smoke <url>                → 用指定 URL 执行（覆盖默认）
+/browser-smoke default-url <url>    → 修改默认 URL
+```
+
+状态文件由 skill 指令中的 Claude 负责读写，脚本不感知。默认 URL 初始值设为项目的 Cloudflare Workers 部署地址。
+
+**理由**: 用户的主要测试目标是自己的部署 URL，每次手打很烦。skill 记住它，`/browser-smoke` 回车即测。同时保留手动指定 URL 的灵活性。
+
+### Decision 8: 报告双格式输出
+
+脚本每次运行产出**两份报告**，放在 `data/smoke-reports/`：
+
+```
+data/smoke-reports/
+├── 2026-06-13T14-32-05.json    ← 机器可读的结构化数据
+└── 2026-06-13T14-32-05.md      ← 人可读的中文报告
+```
+
+- **JSON 报告**：完整结构化数据，供 CI 解析、脚本消费、skill 解读
+- **Markdown 报告**：中文叙述，包含加载速度总结、页面内容摘要、交互探测详情、异常列表、综合判定。人直接打开就能看，不依赖 Claude
+
+Skill 完成测试后告知用户两份报告的路径。当用户说"给我看报告"时，skill 直接读 Markdown 版呈现。
+
+**理由**: JSON 适合机器，但对人不友好。一份中文 Markdown 报告让人不用 Claude 也能直接看结果，也方便存档、分享、对比历史。
+
+`data/smoke-reports/` 目录加入 `.gitignore`，不提交到仓库。
 
 ## Risks / Trade-offs
 
@@ -136,6 +191,6 @@ Skill 不实现任何测试逻辑，只做两件事：
 
 ## Open Questions
 
-1. **默认点击数量**: 8 个元素是否合适？登录页只有约 3 个可交互元素，Dashboard 有 30+ 个。如果默认值因页面不同差异大，是否需要百分比模式（如 "点击 50% 的可交互元素"）？
-2. **是否应该默认登录**: 不登录的情况下只能测登录页，大部分应用逻辑测不到。是否需要 `--login admin:admin` 作为默认行为，让 smoke 能逛到工作台内部？
+1. **Markdown 报告模版**: 人可读报告应该包含哪些章节、什么格式？是否需要类似"建议"section（如"加载慢，建议检查 Cloudflare cache 配置"）？
+2. **报告保留策略**: `data/smoke-reports/` 是否会无限增长？是否需要 `--keep N` 参数自动清理旧报告，或手动清理即可？
 3. **与 e2e-smoke.mjs 的关系**: 两个 smoke 工具并存（一个 API、一个浏览器），是否要统一命名或合并入口？当前暂定独立存在，但后续可能需要一个 `pnpm smoke` 同时跑两者。
