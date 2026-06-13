@@ -2,17 +2,17 @@
 
 ## Purpose
 
-冒烟场景定义与执行——标准化的场景 MD 文件，coding agent 读取后用 Playwright 精确执行（登录指定角色、填写表单、点击按钮、验证结果），产出场景级中文报告到 `tests/smoke/`。
+冒烟场景定义与执行——标准化的场景 MD 文件，coding agent 读取后用 Playwright 精确执行（登录指定角色、填写表单、点击按钮、验证结果），产出场景级中文报告到 `tests/smoke/reports/`。
 
 ## ADDED Requirements
 
 ### Requirement: SMK-001 场景文件格式
 
-冒烟场景 SHALL 以 Markdown 文件形式存放在 `tests/smoke/` 目录下，每个文件包含 YAML frontmatter（机器可解析）和 Markdown body（人类可读）。Frontmatter SHALL 包含场景元数据、步骤序列和期望结果。
+冒烟场景 SHALL 以 Markdown 文件形式存放在 `tests/smoke/scenarios/` 目录下，每个文件包含 YAML frontmatter（机器可解析）和 Markdown body（人类可读）。Frontmatter SHALL 包含场景元数据、步骤序列和期望结果。
 
 #### Scenario: 场景文件基本结构
 
-- **WHEN** Agent 读取 `tests/smoke/<name>.md`
+- **WHEN** Agent 读取 `tests/smoke/scenarios/<name>.md`
 - **THEN** 文件 SHALL 包含以下 frontmatter 字段：`name`（场景标识）、`description`（一句话描述）、`role`（登录角色，可选）、`steps`（步骤数组）、`expect`（期望结果）
 - **AND** 每个 step SHALL 包含 `action` 字段（`goto` | `fill` | `click` | `wait` | `check` | `logout` | `relogin`）及对应的参数
 - **AND** frontmatter 后 SHALL 有 Markdown body 供人类阅读
@@ -32,7 +32,7 @@
 #### Scenario: click 步骤
 
 - **WHEN** step action 为 `click`
-- **THEN** SHALL 指定 `selector`（如 `button:has-text("登")`、`.ant-select-item-option:has-text("completer")`）
+- **THEN** SHALL 指定 `selector`（如 `button:has-text("登")`、`.ant-select-item-option:has-text("完成者")`）
 - **AND** Agent SHALL 等待 selector 可见后点击，点击后等待 500ms
 
 #### Scenario: wait 步骤
@@ -46,12 +46,13 @@
 - **WHEN** step action 为 `check`
 - **THEN** SHALL 指定检查项：`url`（URL 包含某字符串）、`contains`（页面包含某文本）、`noError`（无 console/network/antd 错误）
 - **AND** 检查结果为失败时 SHALL 在报告中标记该步为 ❌
+- **AND** `noError` SHALL 排除已知良性信号：登录前 401 on `/api/auth/me`、antd deprecation warning
 
 #### Scenario: logout 步骤
 
 - **WHEN** step action 为 `logout`
-- **THEN** Agent SHALL 点击登出按钮或导航到 `/logout`，清除当前登录会话
-- **AND** 登出后 SHALL 等待页面跳转到登录页
+- **THEN** Agent SHALL 先点击登出按钮，再清除浏览器 cookies，最后导航到 `/login`
+- **AND** 登出后 SHALL 轮询等待登录表单渲染完成
 
 #### Scenario: relogin 步骤
 
@@ -59,6 +60,7 @@
 - **THEN** SHALL 指定 `role` 字段（登录的角色名）
 - **AND** Agent SHALL 在当前页面执行登录操作（goto /login → fill 用户名 → fill 密码 → click 登 → wait 跳转）
 - **AND** 如指定 `password` 字段则使用该密码，否则默认 `changeme`
+- **AND** 页面上的 Ant Design 按钮文本如 `登 录`、`退 出`、`指 派`、`完 成` 可能含空格，SHALL 使用 `:has-text("退")` 等单字子串匹配
 
 #### Scenario: 期望结果
 
@@ -80,23 +82,23 @@
 #### Scenario: 列出可用场景
 
 - **WHEN** 用户输入 `/smoke-scenario`（无参数）
-- **THEN** Claude SHALL 列出 `tests/smoke/` 下所有 `.md` 文件
+- **THEN** Claude SHALL 列出 `tests/smoke/scenarios/` 下所有 `.md` 文件
 - **AND** 每个场景显示 `name` 和 `description`（从 frontmatter 读取）
 
 #### Scenario: 执行单个场景
 
 - **WHEN** 用户输入 `/smoke-scenario login`
-- **THEN** Claude SHALL 读取 `tests/smoke/login.md`
+- **THEN** Claude SHALL 读取 `tests/smoke/scenarios/login.md`
 - **AND** SHALL 解析 frontmatter 获取 steps 和 expect
 - **AND** SHALL 使用 Playwright 按步骤序列执行（goto → fill → click → wait → check → logout → relogin）
 - **AND** SHALL 每步记录结果（✅/❌）
 - **AND** SHALL 执行结束后根据 expect 做综合判定（🟢 通过 / 🔴 失败）
-- **AND** SHALL 产出报告到 `tests/smoke/<name>-<timestamp>.md`
+- **AND** SHALL 产出报告到 `tests/smoke/reports/<name>-<timestamp>.md`
 
 #### Scenario: 执行全部场景
 
 - **WHEN** 用户输入 `/smoke-scenario all`
-- **THEN** Claude SHALL 依次读取并执行 `tests/smoke/` 下所有场景
+- **THEN** Claude SHALL 依次读取并执行 `tests/smoke/scenarios/` 下所有场景
 - **AND** SHALL 每个场景独立报告
 - **AND** SHALL 最后给出汇总：N 个场景，M 个通过，K 个失败
 
@@ -112,6 +114,12 @@
 - **THEN** Claude SHALL 使用指定 URL 作为 base URL 执行场景
 - **AND** 未传 `--url` 时 SHALL 默认使用 `http://localhost:5173`
 
+#### Scenario: 自定义等待时间
+
+- **WHEN** 用户输入 `/smoke-scenario <name> --wait 3000`
+- **THEN** Claude SHALL 在步骤间额外等待 3000ms（默认 500ms）
+- **AND** 适用于远端部署 URL 等需要更长 SPA 渲染等待的场景
+
 #### Scenario: 场景文件不存在
 
 - **WHEN** 用户输入 `/smoke-scenario nonexistent`
@@ -119,12 +127,13 @@
 
 ### Requirement: SMK-003 场景报告
 
-每个场景执行完毕后 SHALL 产出中文 Markdown 报告到 `tests/smoke/`（与场景文件同目录），记录每步执行结果和综合判定。
+每个场景执行完毕后 SHALL 产出中文 Markdown 报告到 `tests/smoke/reports/`，记录每步执行结果和综合判定。
 
 #### Scenario: 报告文件位置
 
 - **WHEN** 场景 `login` 执行完毕
-- **THEN** SHALL 生成报告文件 `tests/smoke/login-<ISO-timestamp>.md`
+- **THEN** SHALL 生成报告文件 `tests/smoke/reports/login-<ISO-timestamp>.md`
+- **AND** `tests/smoke/reports/` 目录如不存在 SHALL 自动创建
 
 #### Scenario: 报告内容结构
 
@@ -147,11 +156,11 @@
 
 ### Requirement: SMK-004 预设场景
 
-项目 SHALL 在 `tests/smoke/` 下预置三个冒烟场景，覆盖核心业务流程。
+项目 SHALL 在 `tests/smoke/scenarios/` 下预置三个冒烟场景，覆盖核心业务流程。
 
 #### Scenario: login 场景
 
-- **WHEN** `tests/smoke/login.md` 存在
+- **WHEN** `tests/smoke/scenarios/login.md` 存在
 - **THEN** 场景 SHALL 定义为：
   - role: admin
   - 步骤: goto /login → fill 用户名 admin → fill 密码 admin → click 登录 → wait 跳转 → check url 包含 /workbench/admin
@@ -159,7 +168,7 @@
 
 #### Scenario: create-ticket 场景
 
-- **WHEN** `tests/smoke/create-ticket.md` 存在
+- **WHEN** `tests/smoke/scenarios/create-ticket.md` 存在
 - **THEN** 场景 SHALL 定义为：
   - role: submitter
   - 步骤: goto /login → fill submitter/changeme → click 登录 → wait 工作台 → goto /workbench/submitter → fill 标题 → fill 描述 → click 提交 → check 工单显示在列表
@@ -167,9 +176,9 @@
 
 #### Scenario: full-flow 场景
 
-- **WHEN** `tests/smoke/full-flow.md` 存在
+- **WHEN** `tests/smoke/scenarios/full-flow.md` 存在
 - **THEN** 场景 SHALL 定义为三阶段，通过 `relogin` 切换角色：
   - 阶段1（submitter 创建工单）: relogin submitter → goto /workbench/submitter → fill 标题/描述 → click 提交 → check 工单显示
   - 阶段2（dispatcher 指派）: logout → relogin dispatcher → 找到工单 → click 指派给 completer → check 状态变更
-  - 阶段3（completer 完成）: logout → relogin completer → 找到工单 → click 开始处理 → click 完成 → check 状态为已完成
-  - expect: 全流程无错误，工单最终状态为已完成
+  - 阶段3（completer 完成）: logout → relogin completer → 找到工单 → click 开始处理 → click 完成 → check noError
+  - expect: 全流程无错误（noError），表分页可能导致 `已完成` 标签不在首页，故不以 `contains` 检查

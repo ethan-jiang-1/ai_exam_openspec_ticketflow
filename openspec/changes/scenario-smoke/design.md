@@ -11,7 +11,7 @@ TicketFlow 是个工单流程系统，有三个角色（submitter/dispatcher/com
 
 ```
 browser-smoke ─── 通用存活检测（半随机点击，不登录）
-smoke-scenarios ─ 精确场景测试（按步骤操作，角色登录，验证结果）
+scenario-smoke ── 精确场景测试（按步骤操作，角色登录，验证结果）
 tests/e2e/ ─────── 精确 E2E 测试（Playwright test runner，带断言）
 ```
 
@@ -22,7 +22,7 @@ tests/e2e/ ─────── 精确 E2E 测试（Playwright test runner，�
 - 新增 skill `/smoke-scenario`，接收场景名执行冒烟场景
 - 覆盖三个核心场景：登录验证、单角色操作、多角色流转
 - 每个场景有明确的步骤和期望结果
-- 产出场景级报告到 `tests/smoke/`（和场景定义同目录）
+- 产出场景级报告到 `tests/smoke/reports/`
 
 **Non-Goals:**
 - 不改 browser-smoke skill
@@ -61,7 +61,7 @@ steps:
   - action: click
     selector: button:has-text("登")
   - action: wait
-    selector: h1, .ant-table, "用户管理"
+    selector: .ant-layout, .ant-table, h1
     timeout: 10000
   - action: check
     url: /workbench/admin
@@ -89,7 +89,7 @@ Frontmatter 给机器解析，Markdown body 给人类阅读。
 
 | 输入 | 动作 |
 |------|------|
-| `/smoke-scenario` | 列出 `tests/smoke/` 下所有可用场景 |
+| `/smoke-scenario` | 列出 `tests/smoke/scenarios/` 下所有可用场景 |
 | `/smoke-scenario <name>` | 读取场景文件，用 Playwright 逐步执行 |
 | `/smoke-scenario <name> --headed` | 打开可见浏览器执行 |
 | `/smoke-scenario <name> --url <url>` | 覆盖目标 URL（默认 localhost:5173） |
@@ -102,7 +102,7 @@ Skill 不调用 browser-smoke.mjs 脚本——它直接 import Playwright chromi
 
 ### Decision 4: 报告格式
 
-场景报告产出到 `tests/smoke/<name>-<timestamp>.md`，和场景定义同目录，中文格式：
+场景报告产出到 `tests/smoke/reports/<name>-<timestamp>.md`，中文格式：
 
 ```markdown
 # 冒烟场景报告: login
@@ -119,7 +119,7 @@ Skill 不调用 browser-smoke.mjs 脚本——它直接 import Playwright chromi
 6. ✅ check contains "用户管理" — found
 
 ## 结果
-🟢 通过 — 4/4 步骤成功，登录流程正常
+🟢 通过 — 6/6 步骤成功，登录流程正常
 ```
 
 每步记录成功/失败，最后给出综合判定。由 coding agent 在执行为过程中实时生成。

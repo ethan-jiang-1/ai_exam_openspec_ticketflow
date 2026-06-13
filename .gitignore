@@ -47,3 +47,6 @@ tests/e2e/screenshots/
 # Browser smoke test
 .browser-smoke-state.json
 data/smoke-reports/
+
+# Smoke scenario reports (runtime-generated)
+tests/smoke/reports/
