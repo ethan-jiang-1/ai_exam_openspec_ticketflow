@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openspec status *)",
+      "Bash(openspec instructions *)",
+      "Bash(openspec list *)",
+      "Bash(open http://localhost:5173/login-dev)"
+    ]
+  }
+}
